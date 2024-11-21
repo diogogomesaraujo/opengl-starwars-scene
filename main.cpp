@@ -74,7 +74,8 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("resources/fighter_1/obj.obj");
+    Model fighter1("resources/fighter_1/obj.obj");
+    Model hangar("resources/hangar/obj.obj");
 
     // draw in wireframe
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -103,12 +104,13 @@ int main()
 
         // lighting settings
         lightPos = camera.Position;
+        ourShader.setVec3("globalAmbientLight", glm::vec3(0.8f, 0.7f, 0.2f)); // Moody yellow light
         ourShader.setVec3("lightPos", lightPos); // Pass light position in world space
         ourShader.setVec3("viewPos", camera.Position); // Pass camera position in world space
 
-        ourShader.setVec3("light.ambient", glm::vec3(0.2f, 0.2f, 0.2f));
-        ourShader.setVec3("light.diffuse", glm::vec3(0.5f, 0.5f, 0.5f)); 
-        ourShader.setVec3("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+        ourShader.setVec3("light.ambient", glm::vec3(0.1f, 0.1f, 0.1f));
+        ourShader.setVec3("light.diffuse", glm::vec3(0.0f, 0.0f, 0.0f)); 
+        ourShader.setVec3("light.specular", glm::vec3(0.1f, 0.1f, 0.1f));
 
         // render
         // ------
@@ -124,12 +126,19 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        // render the fighter model
+        glm::mat4 fighterModel = glm::mat4(1.0f);
+        fighterModel = glm::translate(fighterModel, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        fighterModel = glm::scale(fighterModel, glm::vec3(0.3f, 0.3f, 0.3f));     // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", fighterModel);
+        fighter1.Draw(ourShader);
+
+        // render the hangar model
+        glm::mat4 hangarModel = glm::mat4(1.0f);
+        hangarModel = glm::translate(hangarModel, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", hangarModel);
+        hangar.Draw(ourShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
