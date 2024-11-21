@@ -12,13 +12,16 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform bool blinn;
 
+// Define the ambient light color and intensity
+uniform vec3 ambientLightColor; // e.g., vec3(1.0, 1.0, 1.0) for white light
+uniform float ambientIntensity; // e.g., 0.5 for moderate intensity
+
 void main()
 {           
     vec3 color = texture(floorTexture, fs_in.TexCoords).rgb;
-    
 
-    vec3 ambientColor = vec3(0.12, 0.12, 0.12);
-    vec3 ambient = ambientColor * 0.3;
+    // Ambient lighting
+    vec3 ambient = ambientLightColor * ambientIntensity * color;
 
     // Diffuse lighting
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
