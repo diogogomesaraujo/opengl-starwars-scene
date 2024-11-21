@@ -1,0 +1,33 @@
+CXX = clang++
+CXXFLAGS = -std=c++17 -Wall -Wextra
+INCLUDES = -I/opt/homebrew/include -I$(PWD)/include -I$(PWD)/glad/include
+LDFLAGS = -L/opt/homebrew/lib
+LIBS = -lglfw -framework OpenGL
+
+# Source files
+SOURCES = main.cpp glad/src/glad.c
+
+# Object files
+OBJECTS = $(SOURCES:.cpp=.o)
+OBJECTS := $(OBJECTS:.c=.o)
+
+# Target executable
+TARGET = app
+
+# Main target
+$(TARGET): $(OBJECTS)
+	$(CXX) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
+
+# Compile C++ source files
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Compile C source files (for glad)
+%.o: %.c
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Clean target
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+
+.PHONY: clean
