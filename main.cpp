@@ -5,13 +5,14 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
+unsigned int loadCubemap(vector<std::string> faces);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -71,14 +72,83 @@ int main()
     // build and compile shaders
     // -------------------------
     Shader ourShader("shaders/lighting.vs", "shaders/lighting.fs");
+    Shader skyboxShader("shaders/skybox.vs", "shaders/skybox.fs");
 
     // load models
     // -----------
     Model fighter1("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
 
+    stbi_set_flip_vertically_on_load(false);
+
+    vector<std::string> faces{
+        "resources/skybox/3.png",
+        "resources/skybox/1.png",
+        "resources/skybox/top.png",
+        "resources/skybox/bottom.png",
+        "resources/skybox/2.png",
+        "resources/skybox/4.png"};
+    unsigned int cubemapTexture = loadCubemap(faces);
+
+    float skyboxVertices[] = {
+        // positions
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+
+        -1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, -1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f};
+
+    // skybox VAO
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+
     // draw in wireframe
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // set up vertex data (and buffer(s)) and configure vertex attributes
+    // ------------------------------------------------------------------
 
     // render loop
     // -----------
@@ -90,11 +160,16 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        std::cout << "Camera Position: " << glm::to_string(camera.Position) << std::endl;
+
         // Set material properties (if applicable)
         ourShader.setFloat("material.shininess", 32.0f); // Adjust shininess for the material
 
         // Pass camera position to the shader
         ourShader.setVec3("viewPos", camera.Position);
+
+        skyboxShader.use();
+        skyboxShader.setInt("skybox", 0);
 
         // input
         // -----
@@ -128,12 +203,13 @@ int main()
 
         // render the fighter model
         glm::mat4 fighterModel = glm::mat4(1.0f);
-        fighterModel = glm::translate(fighterModel, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        fighterModel = glm::scale(fighterModel, glm::vec3(0.3f, 0.3f, 0.3f));     // it's a bit too big for our scene, so scale it down
+
+        fighterModel = glm::translate(fighterModel, camera.Position);
+
+        fighterModel = glm::translate(fighterModel, glm::vec3(4.5f, -1.5f, 0.0f)); 
+        fighterModel = glm::scale(fighterModel, glm::vec3(0.3f, 0.3f, 0.3f));
         ourShader.setMat4("model", fighterModel);
         fighter1.Draw(ourShader);
-
-        ourShader.use();
 
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);
@@ -141,6 +217,17 @@ int main()
         hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", hangarModel);
         hangar.Draw(ourShader);
+
+        glDepthFunc(GL_LEQUAL);
+        skyboxShader.use();
+        view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+        skyboxShader.setMat4("view", view);
+        skyboxShader.setMat4("projection", projection);
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDepthFunc(GL_LESS); // Set depth function back to default
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -220,4 +307,34 @@ void mouse_callback(GLFWwindow *window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+unsigned int loadCubemap(vector<std::string> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
 }
