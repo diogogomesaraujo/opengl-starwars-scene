@@ -24,6 +24,9 @@ glm::vec3 lightPos(0.0f, 0.0f, 15.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// pressed
+bool play1 = false, play2 = false, play3 = false;
+
 int main()
 {
     // glfw: initialize and configure
@@ -78,6 +81,8 @@ int main()
     // -----------
     Model fighter1("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
+
+    fighter1.position = make_tuple(4.5f, -1.5f, 0.0f);
 
     stbi_set_flip_vertically_on_load(false);
 
@@ -175,6 +180,9 @@ int main()
         // -----
         processInput(window);
 
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+            play1 = true;
+
         ourShader.use();
 
         // lighting settings
@@ -203,10 +211,33 @@ int main()
 
         // render the fighter model
         glm::mat4 fighterModel = glm::mat4(1.0f);
+        if (play1)
+        {
+            if (!fighter1.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
+                fighter1.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
+            else 
+            {
+                play2 = true;
+                play1 = false;
+            }
+        }
 
-        fighterModel = glm::translate(fighterModel, camera.Position);
+        if (play2)
+        {
+            if(!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f))) 
+                fighter1.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
+            else 
+            {
+                play3 = true;
+            }
+        }
 
-        fighterModel = glm::translate(fighterModel, glm::vec3(4.5f, -1.5f, 0.0f)); 
+        if (play3)
+        {
+            fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
+        }
+
+        fighterModel = glm::translate(fighterModel, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
         fighterModel = glm::scale(fighterModel, glm::vec3(0.3f, 0.3f, 0.3f));
         ourShader.setMat4("model", fighterModel);
         fighter1.Draw(ourShader);

@@ -4,7 +4,8 @@
 class Model
 {
 public:
-    vector<Texture> textures_loaded; 
+    vector<Texture> textures_loaded;
+    tuple<float, float, float> position;
 
     Model(char *path)
     {
@@ -14,6 +15,27 @@ public:
     {
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
+    }
+
+    float lerp(float a, float b, float f)
+    {
+        return a * (1.0 - f) + (b * f);
+    }
+
+    void modelMove(tuple<float, float, float> finalPos)
+    {
+        float speed = 0.005f;
+
+        position = make_tuple(lerp(get<0>(position), get<0>(finalPos), speed), lerp(get<1>(position), get<1>(finalPos), speed), lerp(get<2>(position), get<2>(finalPos), speed));
+    }
+
+    bool hasReachedTarget(tuple<float, float, float> finalPos)
+    {
+        float threshold = 4.0f;
+
+         return (abs(get<0>(position) - get<0>(finalPos)) < threshold &&
+            abs(get<1>(position) - get<1>(finalPos)) < threshold &&
+            abs(get<2>(position) - get<2>(finalPos)) < threshold);
     }
 
 private:
@@ -149,7 +171,7 @@ private:
                 texture.type = typeName;
                 texture.path = str.C_Str();
                 textures.push_back(texture);
-                textures_loaded.push_back(texture); // add to loaded textures
+                textures_loaded.push_back(texture);
             }
         }
         return textures;
