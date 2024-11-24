@@ -25,7 +25,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // pressed
-bool play1 = false, play2 = false, play3 = false;
+bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, play6 = false;
 
 int main()
 {
@@ -80,19 +80,21 @@ int main()
     // load models
     // -----------
     Model fighter1("resources/fighter_1/obj.obj");
+    Model fighter2("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
 
     fighter1.position = make_tuple(4.5f, -1.5f, 0.0f);
+    fighter2.position = make_tuple(6.389964f, 2.432045f, 2.700783f);
 
     stbi_set_flip_vertically_on_load(false);
 
     vector<std::string> faces{
-        "resources/skybox/3.png",
-        "resources/skybox/1.png",
-        "resources/skybox/top.png",
-        "resources/skybox/bottom.png",
-        "resources/skybox/2.png",
-        "resources/skybox/4.png"};
+        "resources/skybox 2/right.png",
+        "resources/skybox 2/left.png",
+        "resources/skybox 2/top.png",
+        "resources/skybox 2/bottom.png",
+        "resources/skybox 2/front.png",
+        "resources/skybox 2/back.png"};
     unsigned int cubemapTexture = loadCubemap(faces);
 
     float skyboxVertices[] = {
@@ -165,8 +167,6 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        std::cout << "Camera Position: " << glm::to_string(camera.Position) << std::endl;
-
         // Set material properties (if applicable)
         ourShader.setFloat("material.shininess", 32.0f); // Adjust shininess for the material
 
@@ -209,8 +209,8 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render the fighter model
-        glm::mat4 fighterModel = glm::mat4(1.0f);
+        // render the fighter1 model
+        glm::mat4 fighter1Model = glm::mat4(1.0f);
         if (play1)
         {
             if (!fighter1.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
@@ -229,18 +229,63 @@ int main()
             else 
             {
                 play3 = true;
+                play2 = false;
             }
         }
 
         if (play3)
         {
-            fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
+            if(!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150))) 
+                fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
+            else 
+            {
+                play4 = true;
+                play3 = false;
+            }
         }
 
-        fighterModel = glm::translate(fighterModel, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
-        fighterModel = glm::scale(fighterModel, glm::vec3(0.3f, 0.3f, 0.3f));
-        ourShader.setMat4("model", fighterModel);
+        fighter1Model = glm::translate(fighter1Model, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
+        fighter1Model = glm::scale(fighter1Model, glm::vec3(0.3f, 0.3f, 0.3f));
+
+
+        ourShader.setMat4("model", fighter1Model);
         fighter1.Draw(ourShader);
+
+        // render the fighter2 model
+        glm::mat4 fighter2Model = glm::mat4(1.0f);
+        if (play4)
+        {
+            if (!fighter2.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
+                fighter2.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
+            else 
+            {
+                play5 = true;
+                play4 = false;
+            }
+        }
+
+        if (play5)
+        {
+            if(!fighter2.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f))) 
+                fighter2.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
+            else 
+            {
+                play6 = true;
+                play5 = false;
+            }
+        }
+
+        if (play6)
+        {
+            fighter2.modelMove(make_tuple(5.200547, 2.633695, -62.159782));
+        }
+
+        fighter2Model = glm::translate(fighter2Model, glm::vec3(get<0>(fighter2.position), get<1>(fighter2.position), get<2>(fighter2.position)));
+        fighter2Model = glm::scale(fighter2Model, glm::vec3(0.3f, 0.3f, 0.3f));
+
+
+        ourShader.setMat4("model", fighter2Model);
+        fighter2.Draw(ourShader);
 
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);

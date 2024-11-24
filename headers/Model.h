@@ -31,7 +31,7 @@ public:
 
     bool hasReachedTarget(tuple<float, float, float> finalPos)
     {
-        float threshold = 4.0f;
+        float threshold = 3.0f;
 
          return (abs(get<0>(position) - get<0>(finalPos)) < threshold &&
             abs(get<1>(position) - get<1>(finalPos)) < threshold &&
