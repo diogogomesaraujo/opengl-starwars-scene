@@ -215,7 +215,7 @@ int main()
         {
             if (!fighter1.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
                 fighter1.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
-            else
+            else 
             {
                 play2 = true;
                 play1 = false;
@@ -224,9 +224,9 @@ int main()
 
         if (play2)
         {
-            if(!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f)))
+            if(!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f))) 
                 fighter1.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
-            else
+            else 
             {
                 play3 = true;
                 play2 = false;
@@ -235,9 +235,9 @@ int main()
 
         if (play3)
         {
-            if(!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150)))
+            if(!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150))) 
                 fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
-            else
+            else 
             {
                 play4 = true;
                 play3 = false;
@@ -257,7 +257,7 @@ int main()
         {
             if (!fighter2.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
                 fighter2.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
-            else
+            else 
             {
                 play5 = true;
                 play4 = false;
@@ -266,9 +266,9 @@ int main()
 
         if (play5)
         {
-            if(!fighter2.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f)))
+            if(!fighter2.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f))) 
                 fighter2.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
-            else
+            else 
             {
                 play6 = true;
                 play5 = false;
@@ -289,8 +289,8 @@ int main()
 
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);
-        hangarModel = glm::translate(hangarModel, glm::vec3(0.0f, 0.0f, 0.0f));
-        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));  
+        hangarModel = glm::translate(hangarModel, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", hangarModel);
         hangar.Draw(ourShader);
 
