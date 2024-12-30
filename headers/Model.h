@@ -7,7 +7,7 @@ public:
     vector<Texture> textures_loaded;
     tuple<float, float, float> position;
 
-    Model(char *path)
+    Model(const char *path)
     {
         loadModel(path);
     }

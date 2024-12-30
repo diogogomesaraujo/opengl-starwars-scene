@@ -1,5 +1,5 @@
 #include "headers/header.h"
-#include "headers/model.h"
+#include "headers/Model.h"
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -8,14 +8,15 @@ void processInput(GLFWwindow *window);
 unsigned int loadCubemap(vector<std::string> faces);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
+bool cameraLocked = false;
 
 // lighting
 glm::vec3 lightPos(0.0f, 0.0f, 15.0f);
@@ -80,11 +81,11 @@ int main()
     // load models
     // -----------
     Model fighter1("resources/fighter_1/obj.obj");
-    Model fighter2("resources/fighter_1/obj.obj");
+    // Model fighter2("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
 
     fighter1.position = make_tuple(4.5f, -1.5f, 0.0f);
-    fighter2.position = make_tuple(6.389964f, 2.432045f, 2.700783f);
+    // fighter2.position = make_tuple(6.389964f, 2.432045f, 2.700783f);
 
     stbi_set_flip_vertically_on_load(false);
 
@@ -250,7 +251,8 @@ int main()
 
         ourShader.setMat4("model", fighter1Model);
         fighter1.Draw(ourShader);
-
+        
+        /*
         // render the fighter2 model
         glm::mat4 fighter2Model = glm::mat4(1.0f);
         if (play4)
@@ -286,6 +288,7 @@ int main()
 
         ourShader.setMat4("model", fighter2Model);
         fighter2.Draw(ourShader);
+        */
 
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);
@@ -324,26 +327,45 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime);
+    // Toggle camera lock when pressing the "L" key
+    static bool lKeyPressed = false; // Tracks whether the "L" key was pressed
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+    {
+        if (!lKeyPressed)
+        {
+            cameraLocked = !cameraLocked; // Toggle camera lock
+            lKeyPressed = true;
+        }
+    }
+    else
+    {
+        lKeyPressed = false; // Reset the key press state when "L" is released
+    }
+
+    // Process camera movement only if the camera is not locked
+    if (!cameraLocked)
+    {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+            camera.ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            camera.ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            camera.ProcessKeyboard(UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            camera.ProcessKeyboard(DOWN, deltaTime);
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -359,6 +381,10 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow *window, double xposIn, double yposIn)
 {
+    // If the camera is locked, do not process mouse movement
+    if (cameraLocked)
+        return;
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -382,8 +408,13 @@ void mouse_callback(GLFWwindow *window, double xposIn, double yposIn)
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 {
+    // If the camera is locked, do not process mouse scroll
+    if (cameraLocked)
+        return;
+
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
+
 
 unsigned int loadCubemap(vector<std::string> faces)
 {
