@@ -4,7 +4,7 @@
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Model &fighter1);
 unsigned int loadCubemap(vector<std::string> faces);
 
 // settings
@@ -29,28 +29,27 @@ float lastFrame = 0.0f;
 bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, play6 = false;
 
 // predefined Camera Positions
-glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f); // Example camera position 1
-glm::vec3 cameraPos2 = glm::vec3(15.0f, 5.0f, 20.0f); // Example camera position 2
-glm::vec3 cameraPos3 = glm::vec3(-15.0f, 5.0f, 20.0f); // Example camera position 3
+glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f); 
+glm::vec3 cameraPos2 = glm::vec3(15.0f, 5.0f, 20.0f); 
+glm::vec3 cameraPos3 = glm::vec3(-15.0f, 5.0f, 20.0f); 
 
-// Predefined Camera Orientations
-glm::vec3 cameraFront1 = glm::vec3(0.994859f, -0.101172f, -0.00446301f); // Default camera front direction
-glm::vec3 cameraFront2 = glm::vec3(1.0f, 0.0f, 0.0f);  // Camera looking towards positive X-axis
-glm::vec3 cameraFront3 = glm::vec3(-1.0f, 0.0f, 0.0f); // Camera looking towards negative X-axis
+// predefined Camera Orientations
+glm::vec3 cameraFront1 = glm::vec3(0.994859f, -0.101172f, -0.00446301f); 
+glm::vec3 cameraFront2 = glm::vec3(1.0f, 0.0f, 0.0f); 
+glm::vec3 cameraFront3 = glm::vec3(-1.0f, 0.0f, 0.0f); 
 
 void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront) {
-    // Update the camera position and front vector
+    // update the camera position and front vector
     camera.Position = newPos;
     camera.Front = glm::normalize(newFront); 
 
-    // Recalculate yaw and pitch from the new front vector
+    // recalculate yaw and pitch from the new front vector
     camera.Yaw = glm::atan(camera.Front.z, camera.Front.x);  
     camera.Pitch = glm::asin(camera.Front.y);                
 
-    // Ensure the up vector is perpendicular to the front direction
+    // ensure the up vector is perpendicular to the front direction
     camera.Up = glm::normalize(glm::cross(glm::cross(camera.Front, glm::vec3(0.0f, 1.0f, 0.0f)), camera.Front));
 
-    // Lock the camera so user input doesn't affect it
     cameraLocked = true;
 }
 
@@ -203,7 +202,7 @@ int main()
 
         // input
         // -----
-        processInput(window);
+        processInput(window, fighter1);
 
         if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
             play1 = true;
@@ -271,14 +270,12 @@ int main()
 
         fighter1Model = glm::translate(fighter1Model, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
         fighter1Model = glm::scale(fighter1Model, glm::vec3(0.3f, 0.3f, 0.3f));
-
-
         ourShader.setMat4("model", fighter1Model);
         fighter1.Draw(ourShader);
 
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);
-        hangarModel = glm::translate(hangarModel, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
         hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", hangarModel);
         hangar.Draw(ourShader);
@@ -308,41 +305,63 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, Model &fighter1)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // Toggle camera lock when pressing the "L" key
-    static bool lKeyPressed = false; // Tracks whether the "L" key was pressed
+    // toggle camera lock when pressing the "L" key
+    static bool lKeyPressed = false; 
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
     {
         if (!lKeyPressed)
         {
-            cameraLocked = !cameraLocked; // Toggle camera lock
+            cameraLocked = !cameraLocked; 
             lKeyPressed = true;
         }
     }
     else
     {
-        lKeyPressed = false; // Reset the key press state when "L" is released
+        lKeyPressed = false; 
     }
 
-    // Switch camera positions based on key input
+    // switch camera positions based on key input
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos1, cameraFront1); // Move camera to position 1
+        switchCameraPosition(cameraPos1, cameraFront1); 
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos2, cameraFront2); // Move camera to position 2
+        switchCameraPosition(cameraPos2, cameraFront2); 
     }
     if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos3, cameraFront3); // Move camera to position 3
+        switchCameraPosition(cameraPos3, cameraFront3); 
     }
 
-    // Process camera movement only if the camera is not locked
+    // horizontal movement for fighter1 if position 1 is active - for now only for position 1
+    static float fighterMinZ = -5.0f; 
+    static float fighterMaxZ = 5.0f;  
+
+    float movementSpeed = 10.0f; 
+
+    if (camera.Position == cameraPos1) 
+    {
+        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+        {
+            std::get<2>(fighter1.position) -= movementSpeed * deltaTime; 
+            if (std::get<2>(fighter1.position) < fighterMinZ)
+                std::get<2>(fighter1.position) = fighterMinZ; 
+        }
+        if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+        {
+            std::get<2>(fighter1.position) += movementSpeed * deltaTime; 
+            if (std::get<2>(fighter1.position) > fighterMaxZ)
+                std::get<2>(fighter1.position) = fighterMaxZ; 
+        }
+    }
+
+    // process camera movement only if the camera is not locked
     if (!cameraLocked)
     {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -366,10 +385,6 @@ void processInput(GLFWwindow *window)
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
             camera.ProcessKeyboard(DOWN, deltaTime);
     }
-
-    // Print the camera position and front direction for debugging
-    std::cout << "Camera Position: (" << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << ") ";
-    std::cout << "Camera Front: (" << camera.Front.x << ", " << camera.Front.y << ", " << camera.Front.z << ")" << std::endl;
 }
 
 
