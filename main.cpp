@@ -339,25 +339,58 @@ void processInput(GLFWwindow *window, Model &fighter1)
         switchCameraPosition(cameraPos3, cameraFront3); 
     }
 
-    // horizontal movement for fighter1 if position 1 is active - for now only for position 1
-    static float fighterMinZ = -5.0f; 
-    static float fighterMaxZ = 5.0f;  
+    // adjust these variables for faster movement
+    static float fighterVelocity = 0.0f; 
+    static float fighterAcceleration = 10.0f; 
+    static float fighterMaxSpeed = 5.0f; 
+    static float fighterDamping = 5.0f;
+    static float fighterMinX = -5.0f;
+    static float fighterMaxX = 5.0f;  
 
-    float movementSpeed = 10.0f; 
-
-    if (camera.Position == cameraPos1) 
+    if (camera.Position == cameraPos1)
     {
+        // accelerate left
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
         {
-            std::get<2>(fighter1.position) -= movementSpeed * deltaTime; 
-            if (std::get<2>(fighter1.position) < fighterMinZ)
-                std::get<2>(fighter1.position) = fighterMinZ; 
+            fighterVelocity -= fighterAcceleration * deltaTime;
         }
-        if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+        // accelerate right
+        else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
         {
-            std::get<2>(fighter1.position) += movementSpeed * deltaTime; 
-            if (std::get<2>(fighter1.position) > fighterMaxZ)
-                std::get<2>(fighter1.position) = fighterMaxZ; 
+            fighterVelocity += fighterAcceleration * deltaTime;
+        }
+        else
+        {
+            // apply damping when no key is pressed - clamp to zero
+            if (fighterVelocity > 0.0f)
+            {
+                fighterVelocity -= fighterDamping * deltaTime;
+                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; 
+            }
+            else if (fighterVelocity < 0.0f)
+            {
+                fighterVelocity += fighterDamping * deltaTime;
+                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; 
+            }
+        }
+
+        // clamp velocity to maximum speed
+        if (fighterVelocity > fighterMaxSpeed) fighterVelocity = fighterMaxSpeed;
+        if (fighterVelocity < -fighterMaxSpeed) fighterVelocity = -fighterMaxSpeed;
+
+        // update fighter position based on velocity
+        std::get<2>(fighter1.position) += fighterVelocity * deltaTime;
+
+        // clamp position to boundaries - stop movement if hitting boundary
+        if (std::get<2>(fighter1.position) < fighterMinX)
+        {
+            std::get<2>(fighter1.position) = fighterMinX;
+            fighterVelocity = 0.0f; 
+        }
+        if (std::get<2>(fighter1.position) > fighterMaxX)
+        {
+            std::get<2>(fighter1.position) = fighterMaxX;
+            fighterVelocity = 0.0f; 
         }
     }
 
