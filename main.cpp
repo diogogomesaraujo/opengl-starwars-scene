@@ -28,6 +28,9 @@ float lastFrame = 0.0f;
 // pressed
 bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, play6 = false;
 
+// tilt angle for fighter 
+float fighterTiltAngle = 0.0f;
+
 // predefined Camera Positions
 glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f); 
 glm::vec3 cameraPos2 = glm::vec3(15.0f, 5.0f, 20.0f); 
@@ -269,6 +272,7 @@ int main()
         }
 
         fighter1Model = glm::translate(fighter1Model, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
+        fighter1Model = glm::rotate(fighter1Model, glm::radians(fighterTiltAngle), glm::vec3(1.0f, 0.0f, 0.0f));
         fighter1Model = glm::scale(fighter1Model, glm::vec3(0.3f, 0.3f, 0.3f));
         ourShader.setMat4("model", fighter1Model);
         fighter1.Draw(ourShader);
@@ -347,50 +351,74 @@ void processInput(GLFWwindow *window, Model &fighter1)
     static float fighterMinX = -5.0f;
     static float fighterMaxX = 5.0f;  
 
-    if (camera.Position == cameraPos1)
+    static float maxTiltAngle = 15.0f;    // Maximum tilt angle
+    static float tiltSpeed = 5.0f;        // Speed of tilt interpolation
+
+    // Movement logic for position 1
+    if (camera.Position == cameraPos1) // Ensure movement only in position 1
     {
-        // accelerate left
+        float targetTiltAngle = 0.0f; // Desired tilt angle
+        bool isMoving = false;
+        bool atBoundary = false; // Tracks if the fighter is at a boundary
+
+        // Check for movement and determine target tilt angle
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
         {
-            fighterVelocity -= fighterAcceleration * deltaTime;
+            isMoving = true;
+            targetTiltAngle = -maxTiltAngle; // Tilt left
+            fighterVelocity -= fighterAcceleration * deltaTime; // Accelerate left
         }
-        // accelerate right
         else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
         {
-            fighterVelocity += fighterAcceleration * deltaTime;
+            isMoving = true;
+            targetTiltAngle = maxTiltAngle; // Tilt right
+            fighterVelocity += fighterAcceleration * deltaTime; // Accelerate right
         }
         else
         {
-            // apply damping when no key is pressed - clamp to zero
+            // Gradually reduce velocity when no key is pressed
             if (fighterVelocity > 0.0f)
             {
                 fighterVelocity -= fighterDamping * deltaTime;
-                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; 
+                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; // Clamp to zero
             }
             else if (fighterVelocity < 0.0f)
             {
                 fighterVelocity += fighterDamping * deltaTime;
-                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; 
+                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; // Clamp to zero
             }
         }
 
-        // clamp velocity to maximum speed
-        if (fighterVelocity > fighterMaxSpeed) fighterVelocity = fighterMaxSpeed;
-        if (fighterVelocity < -fighterMaxSpeed) fighterVelocity = -fighterMaxSpeed;
+        // Clamp velocity to maximum speed
+        fighterVelocity = glm::clamp(fighterVelocity, -fighterMaxSpeed, fighterMaxSpeed);
 
-        // update fighter position based on velocity
+        // Update fighter position
         std::get<2>(fighter1.position) += fighterVelocity * deltaTime;
 
-        // clamp position to boundaries - stop movement if hitting boundary
+        // Clamp position to boundaries and detect if at boundary
         if (std::get<2>(fighter1.position) < fighterMinX)
         {
             std::get<2>(fighter1.position) = fighterMinX;
-            fighterVelocity = 0.0f; 
+            fighterVelocity = 0.0f; // Stop movement if hitting boundary
+            atBoundary = true;     // Mark as at boundary
         }
         if (std::get<2>(fighter1.position) > fighterMaxX)
         {
             std::get<2>(fighter1.position) = fighterMaxX;
-            fighterVelocity = 0.0f; 
+            fighterVelocity = 0.0f; // Stop movement if hitting boundary
+            atBoundary = true;     // Mark as at boundary
+        }
+
+        // Smoothly interpolate the tilt angle
+        if (isMoving)
+        {
+            // Apply tilt based on movement
+            fighterTiltAngle = glm::mix(fighterTiltAngle, targetTiltAngle, tiltSpeed * deltaTime);
+        }
+        else if (!atBoundary)
+        {
+            // Reset tilt to 0 only if not at boundary
+            fighterTiltAngle = glm::mix(fighterTiltAngle, 0.0f, tiltSpeed * deltaTime);
         }
     }
 
