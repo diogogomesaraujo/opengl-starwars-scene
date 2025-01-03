@@ -31,28 +31,32 @@ bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, 
 // tilt angle for fighter 
 float fighterTiltAngle = 0.0f;
 
-// predefined Camera Positions
+// predefined positions
 glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f); 
-glm::vec3 cameraPos2 = glm::vec3(15.0f, 5.0f, 20.0f); 
-glm::vec3 cameraPos3 = glm::vec3(-15.0f, 5.0f, 20.0f); 
-
-// predefined Camera Orientations
 glm::vec3 cameraFront1 = glm::vec3(0.994859f, -0.101172f, -0.00446301f); 
-glm::vec3 cameraFront2 = glm::vec3(1.0f, 0.0f, 0.0f); 
-glm::vec3 cameraFront3 = glm::vec3(-1.0f, 0.0f, 0.0f); 
 
-void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront) {
-    // update the camera position and front vector
-    camera.Position = newPos;
-    camera.Front = glm::normalize(newFront); 
+glm::vec3 cameraPos2 = glm::vec3(-6.3649f, 10.3532f, -0.0311571f);  
+glm::vec3 cameraFront2 = glm::vec3(0.915654f, -0.401942f, 0.00448226f);
 
-    // recalculate yaw and pitch from the new front vector
+glm::vec3 cameraPos3 = glm::vec3(-5.13154f, 2.62794f, 9.67647f);  
+glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
+
+
+void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFighter, const Model &fighter) {
+    if (followFighter) {
+        // dynamically follow the fighter
+        camera.Position = glm::vec3(std::get<0>(fighter.position), std::get<1>(fighter.position), std::get<2>(fighter.position)) + newPos;
+        camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));  
+    } else {
+        camera.Position = newPos;
+        camera.Front = glm::normalize(newFront);
+    }
+
+    // recalculate yaw and pitch
     camera.Yaw = glm::atan(camera.Front.z, camera.Front.x);  
     camera.Pitch = glm::asin(camera.Front.y);                
 
-    // ensure the up vector is perpendicular to the front direction
     camera.Up = glm::normalize(glm::cross(glm::cross(camera.Front, glm::vec3(0.0f, 1.0f, 0.0f)), camera.Front));
-
     cameraLocked = true;
 }
 
@@ -332,18 +336,18 @@ void processInput(GLFWwindow *window, Model &fighter1)
     // switch camera positions based on key input
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos1, cameraFront1); 
+        switchCameraPosition(cameraPos1, cameraFront1, false, fighter1);
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos2, cameraFront2); 
+        switchCameraPosition(cameraPos2, cameraFront2, false, fighter1); 
     }
     if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos3, cameraFront3); 
+        switchCameraPosition(cameraPos3, cameraFront3, false, fighter1); 
     }
 
-    // adjust these variables for faster movement
+    // variables for movement
     static float fighterVelocity = 0.0f; 
     static float fighterAcceleration = 10.0f; 
     static float fighterMaxSpeed = 5.0f; 
@@ -351,73 +355,118 @@ void processInput(GLFWwindow *window, Model &fighter1)
     static float fighterMinX = -5.0f;
     static float fighterMaxX = 5.0f;  
 
-    static float maxTiltAngle = 15.0f;    // Maximum tilt angle
-    static float tiltSpeed = 5.0f;        // Speed of tilt interpolation
+    static float maxTiltAngle = 15.0f;    
+    static float tiltSpeed = 5.0f;      
 
-    // Movement logic for position 1
-    if (camera.Position == cameraPos1) // Ensure movement only in position 1
+    // different boundaries for each position
+    static float fighterMinXPos1 = -5.0f;  
+    static float fighterMaxXPos1 = 5.0f;  
+
+    static float fighterMinXPos2 = -10.0f; 
+    static float fighterMaxXPos2 = 10.0f;  
+
+    static float fighterMinXPos3 = -7.0f; 
+    static float fighterMaxXPos3 = 7.0f;  
+
+    // movement for the 3 positions 
+    if (camera.Position == cameraPos1 || camera.Position == cameraPos2 || camera.Position == cameraPos3) 
     {
-        float targetTiltAngle = 0.0f; // Desired tilt angle
+        float targetTiltAngle = 0.0f;
         bool isMoving = false;
-        bool atBoundary = false; // Tracks if the fighter is at a boundary
+        bool atBoundary = false; 
 
-        // Check for movement and determine target tilt angle
+        // check for movement and determine target tilt angle and accelerates left/right
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
         {
             isMoving = true;
-            targetTiltAngle = -maxTiltAngle; // Tilt left
-            fighterVelocity -= fighterAcceleration * deltaTime; // Accelerate left
+            targetTiltAngle = -maxTiltAngle; 
+            fighterVelocity -= fighterAcceleration * deltaTime; 
         }
         else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
         {
             isMoving = true;
-            targetTiltAngle = maxTiltAngle; // Tilt right
-            fighterVelocity += fighterAcceleration * deltaTime; // Accelerate right
+            targetTiltAngle = maxTiltAngle; 
+            fighterVelocity += fighterAcceleration * deltaTime; 
         }
         else
         {
-            // Gradually reduce velocity when no key is pressed
+            // gradually reduce velocity when no key is pressed
             if (fighterVelocity > 0.0f)
             {
                 fighterVelocity -= fighterDamping * deltaTime;
-                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; // Clamp to zero
+                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; 
             }
             else if (fighterVelocity < 0.0f)
             {
                 fighterVelocity += fighterDamping * deltaTime;
-                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; // Clamp to zero
+                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; 
             }
         }
 
-        // Clamp velocity to maximum speed
+        // clamp velocity to maximum speed
         fighterVelocity = glm::clamp(fighterVelocity, -fighterMaxSpeed, fighterMaxSpeed);
 
-        // Update fighter position
+        // update fighter position 
         std::get<2>(fighter1.position) += fighterVelocity * deltaTime;
 
-        // Clamp position to boundaries and detect if at boundary
-        if (std::get<2>(fighter1.position) < fighterMinX)
+        // apply different boundaries based on the camera position
+        if (camera.Position == cameraPos1)
         {
-            std::get<2>(fighter1.position) = fighterMinX;
-            fighterVelocity = 0.0f; // Stop movement if hitting boundary
-            atBoundary = true;     // Mark as at boundary
+            
+            if (std::get<2>(fighter1.position) < fighterMinXPos1)
+            {
+                std::get<2>(fighter1.position) = fighterMinXPos1;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;    
+            }
+            if (std::get<2>(fighter1.position) > fighterMaxXPos1)
+            {
+                std::get<2>(fighter1.position) = fighterMaxXPos1;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;    
+            }
         }
-        if (std::get<2>(fighter1.position) > fighterMaxX)
+        else if (camera.Position == cameraPos2)
         {
-            std::get<2>(fighter1.position) = fighterMaxX;
-            fighterVelocity = 0.0f; // Stop movement if hitting boundary
-            atBoundary = true;     // Mark as at boundary
+            
+            if (std::get<2>(fighter1.position) < fighterMinXPos2)
+            {
+                std::get<2>(fighter1.position) = fighterMinXPos2;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;    
+            }
+            if (std::get<2>(fighter1.position) > fighterMaxXPos2)
+            {
+                std::get<2>(fighter1.position) = fighterMaxXPos2;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;    
+            }
+        }
+        else if (camera.Position == cameraPos3)
+        {
+            if (std::get<2>(fighter1.position) < fighterMinXPos3)
+            {
+                std::get<2>(fighter1.position) = fighterMinXPos3;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;    
+            }
+            if (std::get<2>(fighter1.position) > fighterMaxXPos3)
+            {
+                std::get<2>(fighter1.position) = fighterMaxXPos3;
+                fighterVelocity = 0.0f; 
+                atBoundary = true;     
+            }
         }
 
-        // Smoothly interpolate the tilt angle
+        // smoothly interpolate the tilt angle
         if (isMoving)
         {
-            // Apply tilt based on movement
+            // apply tilt based on movement
             fighterTiltAngle = glm::mix(fighterTiltAngle, targetTiltAngle, tiltSpeed * deltaTime);
         }
         else if (!atBoundary)
         {
-            // Reset tilt to 0 only if not at boundary
+            // reset tilt to 0 only if not at boundary
             fighterTiltAngle = glm::mix(fighterTiltAngle, 0.0f, tiltSpeed * deltaTime);
         }
     }
@@ -446,6 +495,10 @@ void processInput(GLFWwindow *window, Model &fighter1)
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
             camera.ProcessKeyboard(DOWN, deltaTime);
     }
+
+    // print the camera position and front direction for debugging
+    std::cout << "Camera Position: (" << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << ") ";
+    std::cout << "Camera Front: (" << camera.Front.x << ", " << camera.Front.y << ", " << camera.Front.z << ")" << std::endl;
 }
 
 
