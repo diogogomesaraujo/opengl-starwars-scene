@@ -9,7 +9,7 @@ class Enemy : public Model
 public:
     // Constructor
     Enemy(const std::string &path, std::tuple<float, float, float> initialPos)
-        : Model(const_cast<char*>(path.c_str())), initialPosition(initialPos)
+        : Model(const_cast<char *>(path.c_str())), initialPosition(initialPos)
     {
         position = initialPosition;
     }
@@ -20,8 +20,7 @@ public:
         std::tuple<float, float, float> newPos = std::make_tuple(
             std::get<0>(position),
             std::get<1>(position),
-            std::get<2>(position) + deltaX
-        );
+            std::get<2>(position) + deltaX);
         modelMove(newPos);
     }
 
@@ -31,8 +30,7 @@ public:
         std::tuple<float, float, float> newPos = std::make_tuple(
             std::get<0>(position) - deltaY,
             std::get<1>(position),
-            std::get<2>(position)
-        );
+            std::get<2>(position));
         modelMove(newPos);
     }
 
@@ -41,6 +39,22 @@ public:
 
     // Get current y position (now returns y coordinate)
     float getY() const { return std::get<0>(position); }
+
+    glm::vec3 getBoundingBoxMin() const
+    {
+        return glm::vec3(
+            std::get<0>(position) - 2.5f, // Adjust size as needed
+            std::get<1>(position) - 2.5f,
+            std::get<2>(position) - 2.5f);
+    }
+
+    glm::vec3 getBoundingBoxMax() const
+    {
+        return glm::vec3(
+            std::get<0>(position) + 2.5f, // Adjust size as needed
+            std::get<1>(position) + 2.5f,
+            std::get<2>(position) + 2.5f);
+    }
 
 private:
     std::tuple<float, float, float> initialPosition;

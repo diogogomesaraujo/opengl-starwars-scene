@@ -1,6 +1,7 @@
 #include "headers/header.h"
 #include "headers/Model.h"
 #include "headers/Enemy.h"
+#include "headers/Projectile.h"
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -43,20 +44,22 @@ glm::vec3 cameraPos3 = glm::vec3(-5.13154f, 2.62794f, 9.67647f);
 glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
 
 // enemy
-int enemyDirection = 1;             // 1 for right, -1 for left
+int enemyDirection = 1;               // 1 for right, -1 for left
 float enemyMoveSpeed = 500.0f;        // Units per second
 float enemyMoveDownDistance = 100.0f; // Units to move down when changing direction
 float enemyBoundaryLeft = -2000.0f;   // 25 units left of current start
 float enemyBoundaryRight = 2000.0f;   // 25 units right of current start
-bool shouldMoveDown = false;        // Flag to indicate if enemies should move down
+bool shouldMoveDown = false;          // Flag to indicate if enemies should move down
+
+std::vector<Projectile> projectiles;
 
 // Function to calculate group boundaries
-std::pair<float, float> calculateInitialGroupBoundaries(const std::vector<Enemy>& enemies)
+std::pair<float, float> calculateInitialGroupBoundaries(const std::vector<Enemy> &enemies)
 {
     float minX = std::numeric_limits<float>::max();
     float maxX = std::numeric_limits<float>::lowest();
 
-    for (const auto& enemy : enemies)
+    for (const auto &enemy : enemies)
     {
         float x = std::get<0>(enemy.position);
         if (x < minX)
@@ -112,6 +115,13 @@ std::vector<Enemy> createEnemyGrid(const std::string &modelPath, std::tuple<floa
     return enemies;
 }
 
+bool checkCollision(const glm::vec3 &minA, const glm::vec3 &maxA, const glm::vec3 &minB, const glm::vec3 &maxB)
+{
+    return (minA.x <= maxB.x && maxA.x >= minB.x) &&
+           (minA.y <= maxB.y && maxA.y >= minB.y) &&
+           (minA.z <= maxB.z && maxA.z >= minB.z);
+}
+
 int main()
 {
     // glfw: initialize and configure
@@ -161,14 +171,18 @@ int main()
     // -------------------------
     Shader ourShader("shaders/lighting.vs", "shaders/lighting.fs");
     Shader skyboxShader("shaders/skybox.vs", "shaders/skybox.fs");
+    Shader projectileShader("shaders/projectile.vs", "shaders/projectile.fs");
 
     // load models
     // -----------
-    Model fighter1("resources/fighter_1/obj.obj");
+    Model fighter1("resources/fighter_1/untitled.obj");
     Model hangar("resources/hangar/obj.obj");
 
+    // load projectiles
+    Projectile::initializeCylinder();
+
     // Parameters for the enemy grid
-    std::string enemyModelPath = "resources/fighter_1/obj.obj";
+    std::string enemyModelPath = "resources/fighter_1/untitled.obj";
     std::tuple<float, float, float> startPosition = std::make_tuple(35.0f, 0.0f, 0.0f);
     int rows = 2;
     int cols = 3;
@@ -301,11 +315,73 @@ int main()
         // don't forget to enable shader before setting uniforms
         ourShader.use();
 
+        // Check collisions
+        for (auto enemyIt = enemies.begin(); enemyIt != enemies.end();)
+        {
+            bool enemyHit = false;
+
+            for (auto projIt = projectiles.begin(); projIt != projectiles.end();)
+            {
+                if (checkCollision(
+                        (*enemyIt).getBoundingBoxMin(), (*enemyIt).getBoundingBoxMax(),
+                        (*projIt).getBoundingBoxMin(), (*projIt).getBoundingBoxMax()))
+                {
+                    // Mark the projectile as inactive
+                    projIt = projectiles.erase(projIt);
+                    enemyHit = true;
+                    break; // Stop checking other projectiles for this enemy
+                }
+                else
+                {
+                    ++projIt;
+                }
+            }
+
+            if (enemyHit)
+            {
+                enemyIt = enemies.erase(enemyIt);
+            }
+            else
+            {
+                ++enemyIt;
+            }
+        }
+
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
+
+        projectileShader.use();
+        projectileShader.setVec3("materialColor", glm::vec3(1.0f, 0.0f, 0.0f)); // Red color
+        projectileShader.setFloat("materialShininess", 1008.0f);
+        projectileShader.setVec3("emissionColor", glm::vec3(5.0f, 0.2f, 0.2f)); // Intense red glow
+        projectileShader.setFloat("time", glfwGetTime());                       // Pass time for animation
+
+        // Update and render projectiles
+        for (auto it = projectiles.begin(); it != projectiles.end();)
+        {
+            if ((*it).active)
+            {
+                // Update projectile position
+                (*it).update(deltaTime);
+
+                // Optional: Collision detection with enemies can be added here
+
+                // Render the projectile
+                (*it).Draw(ourShader);
+
+                ++it;
+            }
+            else
+            {
+                // Remove inactive projectiles
+                it = projectiles.erase(it);
+            }
+        }
+
+        ourShader.use();
 
         // Update enemy positions using group-based movement
         // Step 1: Check if the group is about to exceed boundaries
@@ -422,6 +498,21 @@ int main()
         glfwPollEvents();
     }
 
+    // After the main loop and before glfwTerminate()
+
+    if (Projectile::VAO != 0)
+    {
+        glDeleteVertexArrays(1, &Projectile::VAO);
+    }
+    if (Projectile::VBO != 0)
+    {
+        glDeleteBuffers(1, &Projectile::VBO);
+    }
+    if (Projectile::EBO != 0)
+    {
+        glDeleteBuffers(1, &Projectile::EBO);
+    }
+
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
@@ -435,7 +526,7 @@ void processInput(GLFWwindow *window, Model &fighter1)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // toggle camera lock when pressing the "L" key
+    // Toggle camera lock when pressing the "L" key
     static bool lKeyPressed = false;
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
     {
@@ -450,7 +541,7 @@ void processInput(GLFWwindow *window, Model &fighter1)
         lKeyPressed = false;
     }
 
-    // switch camera positions based on key input
+    // Switch camera positions based on key input
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
     {
         switchCameraPosition(cameraPos1, cameraFront1, false, fighter1);
@@ -464,18 +555,52 @@ void processInput(GLFWwindow *window, Model &fighter1)
         switchCameraPosition(cameraPos3, cameraFront3, false, fighter1);
     }
 
-    // variables for movement
+    // Handle shooting projectiles with 'V' key
+    static bool vKeyPressedLastFrame = false;
+    static float shootCooldown = 0.5f; // Cooldown period in seconds
+    static float shootTimer = 0.0f;
+
+    if (shootTimer > 0.0f)
+        shootTimer -= deltaTime;
+
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
+    {
+        if (!vKeyPressedLastFrame && shootTimer <= 0.0f)
+        {
+            vKeyPressedLastFrame = true;
+
+            // Define the projectile's initial position (e.g., in front of the fighter)
+            glm::vec3 fighterPos = glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position));
+            glm::vec3 fixedForwardDir = glm::vec3(1.0f, 0.0f, 0.0f);            // Fixed forward direction (e.g., negative Z-axis)
+            glm::vec3 projectileStartPos = fighterPos + fixedForwardDir * 1.0f; // Adjust offset as needed
+
+            // Define the projectile's velocity (e.g., forward direction)
+            float projectileSpeed = 50.0f; // Adjust speed as needed
+            glm::vec3 projectileVelocity = fixedForwardDir * projectileSpeed;
+
+            // Create and add the new projectile to the container
+            projectiles.emplace_back(projectileStartPos, projectileVelocity);
+
+            // Reset the cooldown timer
+            shootTimer = shootCooldown;
+        }
+    }
+    else
+    {
+        vKeyPressedLastFrame = false;
+    }
+
+    // Variables for fighter movement
     static float fighterVelocity = 0.0f;
     static float fighterAcceleration = 10.0f;
     static float fighterMaxSpeed = 5.0f;
     static float fighterDamping = 5.0f;
-    static float fighterMinX = -5.0f;
-    static float fighterMaxX = 5.0f;
 
+    // Tilt variables
     static float maxTiltAngle = 15.0f;
     static float tiltSpeed = 5.0f;
 
-    // different boundaries for each position
+    // Different boundaries for each camera position
     static float fighterMinXPos1 = -5.0f;
     static float fighterMaxXPos1 = 5.0f;
 
@@ -485,14 +610,14 @@ void processInput(GLFWwindow *window, Model &fighter1)
     static float fighterMinXPos3 = -7.0f;
     static float fighterMaxXPos3 = 7.0f;
 
-    // movement for the 3 positions
+    // Movement for the 3 camera positions
     if (camera.Position == cameraPos1 || camera.Position == cameraPos2 || camera.Position == cameraPos3)
     {
         float targetTiltAngle = 0.0f;
         bool isMoving = false;
         bool atBoundary = false;
 
-        // check for movement and determine target tilt angle and accelerates left/right
+        // Check for movement and determine target tilt angle
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
         {
             isMoving = true;
@@ -507,7 +632,7 @@ void processInput(GLFWwindow *window, Model &fighter1)
         }
         else
         {
-            // gradually reduce velocity when no key is pressed
+            // Gradually reduce velocity when no key is pressed
             if (fighterVelocity > 0.0f)
             {
                 fighterVelocity -= fighterDamping * deltaTime;
@@ -522,16 +647,15 @@ void processInput(GLFWwindow *window, Model &fighter1)
             }
         }
 
-        // clamp velocity to maximum speed
+        // Clamp velocity to maximum speed
         fighterVelocity = glm::clamp(fighterVelocity, -fighterMaxSpeed, fighterMaxSpeed);
 
-        // update fighter position
+        // Update fighter position
         std::get<2>(fighter1.position) += fighterVelocity * deltaTime;
 
-        // apply different boundaries based on the camera position
+        // Apply different boundaries based on the camera position
         if (camera.Position == cameraPos1)
         {
-
             if (std::get<2>(fighter1.position) < fighterMinXPos1)
             {
                 std::get<2>(fighter1.position) = fighterMinXPos1;
@@ -547,7 +671,6 @@ void processInput(GLFWwindow *window, Model &fighter1)
         }
         else if (camera.Position == cameraPos2)
         {
-
             if (std::get<2>(fighter1.position) < fighterMinXPos2)
             {
                 std::get<2>(fighter1.position) = fighterMinXPos2;
@@ -577,20 +700,20 @@ void processInput(GLFWwindow *window, Model &fighter1)
             }
         }
 
-        // smoothly interpolate the tilt angle
+        // Smoothly interpolate the tilt angle
         if (isMoving)
         {
-            // apply tilt based on movement
+            // Apply tilt based on movement
             fighterTiltAngle = glm::mix(fighterTiltAngle, targetTiltAngle, tiltSpeed * deltaTime);
         }
         else if (!atBoundary)
         {
-            // reset tilt to 0 only if not at boundary
+            // Reset tilt to 0 only if not at boundary
             fighterTiltAngle = glm::mix(fighterTiltAngle, 0.0f, tiltSpeed * deltaTime);
         }
     }
 
-    // process camera movement only if the camera is not locked
+    // Process camera movement only if the camera is not locked
     if (!cameraLocked)
     {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -601,21 +724,14 @@ void processInput(GLFWwindow *window, Model &fighter1)
             camera.ProcessKeyboard(LEFT, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera.ProcessKeyboard(RIGHT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            camera.ProcessKeyboard(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            camera.ProcessKeyboard(BACKWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            camera.ProcessKeyboard(LEFT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            camera.ProcessKeyboard(RIGHT, deltaTime);
+        // Removed Space key handling for camera movement
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
             camera.ProcessKeyboard(UP, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
             camera.ProcessKeyboard(DOWN, deltaTime);
     }
 
-    // print the camera position and front direction for debugging
+    // Print the camera position and front direction for debugging
     std::cout << "Camera Position: (" << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << ") ";
     std::cout << "Camera Front: (" << camera.Front.x << ", " << camera.Front.y << ", " << camera.Front.z << ")" << std::endl;
 }
