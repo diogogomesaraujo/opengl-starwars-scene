@@ -29,36 +29,64 @@ float lastFrame = 0.0f;
 // pressed
 bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, play6 = false;
 
-// tilt angle for fighter 
+// tilt angle for fighter
 float fighterTiltAngle = 0.0f;
 
 // predefined positions
-glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f); 
-glm::vec3 cameraFront1 = glm::vec3(0.994859f, -0.101172f, -0.00446301f); 
+glm::vec3 cameraPos1 = glm::vec3(-2.47806f, 1.00429f, 0.031182f);
+glm::vec3 cameraFront1 = glm::vec3(0.994859f, -0.101172f, -0.00446301f);
 
-glm::vec3 cameraPos2 = glm::vec3(-6.3649f, 10.3532f, -0.0311571f);  
+glm::vec3 cameraPos2 = glm::vec3(-6.3649f, 10.3532f, -0.0311571f);
 glm::vec3 cameraFront2 = glm::vec3(0.915654f, -0.401942f, 0.00448226f);
 
-glm::vec3 cameraPos3 = glm::vec3(-5.13154f, 2.62794f, 9.67647f);  
+glm::vec3 cameraPos3 = glm::vec3(-5.13154f, 2.62794f, 9.67647f);
 glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
 
+// enemy
+int enemyDirection = 1;             // 1 for right, -1 for left
+float enemyMoveSpeed = 300.0f;        // Units per second
+float enemyMoveDownDistance = 1.0f; // Units to move down when changing direction
+float enemyBoundaryLeft = -1500.0f;   // Left boundary on the x-axis
+float enemyBoundaryRight = 1500.0f;   // Right boundary on the x-axis
+bool shouldMoveDown = false;        // Flag to indicate if enemies should move down
 
-void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFighter, const Model &fighter) {
-    if (followFighter) {
+void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFighter, const Model &fighter)
+{
+    if (followFighter)
+    {
         // dynamically follow the fighter
         camera.Position = glm::vec3(std::get<0>(fighter.position), std::get<1>(fighter.position), std::get<2>(fighter.position)) + newPos;
-        camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));  
-    } else {
+        camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
+    }
+    else
+    {
         camera.Position = newPos;
         camera.Front = glm::normalize(newFront);
     }
 
     // recalculate yaw and pitch
-    camera.Yaw = glm::atan(camera.Front.z, camera.Front.x);  
-    camera.Pitch = glm::asin(camera.Front.y);                
+    camera.Yaw = glm::atan(camera.Front.z, camera.Front.x);
+    camera.Pitch = glm::asin(camera.Front.y);
 
     camera.Up = glm::normalize(glm::cross(glm::cross(camera.Front, glm::vec3(0.0f, 1.0f, 0.0f)), camera.Front));
     cameraLocked = true;
+}
+
+std::vector<Enemy> createEnemyGrid(const std::string &modelPath, std::tuple<float, float, float> startPosition, int rows, int cols, float rowSpacing, float colSpacing)
+{
+    std::vector<Enemy> enemies;
+    for (int row = 0; row < rows; ++row)
+    {
+        for (int col = 0; col < cols; ++col)
+        {
+            std::tuple<float, float, float> enemyPosition = std::make_tuple(
+                std::get<0>(startPosition) + col * colSpacing,
+                std::get<1>(startPosition),
+                std::get<2>(startPosition) + row * rowSpacing);
+            enemies.emplace_back(modelPath, enemyPosition);
+        }
+    }
+    return enemies;
 }
 
 int main()
@@ -116,10 +144,16 @@ int main()
     Model fighter1("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
 
-    Enemy enemy1("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, 0.0f), 2.0f, 0.005f);
-    Enemy enemy2("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, 7.0f), 2.0f, 0.005f);
-    Enemy enemy3("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, -7.0f), 2.0f, 0.005f);
+    // Parameters for the enemy grid
+    std::string enemyModelPath = "resources/fighter_1/obj.obj";
+    std::tuple<float, float, float> startPosition = std::make_tuple(25.0f, 0.0f, 0.0f);
+    int rows = 2;
+    int cols = 3;
+    float rowSpacing = 7.0f;
+    float colSpacing = 12.0f;
 
+    // Generate the enemies without movement parameters
+    std::vector<Enemy> enemies = createEnemyGrid(enemyModelPath, startPosition, rows, cols, rowSpacing, colSpacing);
 
     fighter1.position = make_tuple(4.5f, 0.0f, 0.0f);
 
@@ -177,6 +211,10 @@ int main()
         1.0f, -1.0f, -1.0f,
         -1.0f, -1.0f, 1.0f,
         1.0f, -1.0f, 1.0f};
+
+    // Determine initial group boundaries
+    float groupMinX = 25.0f; // Starting X position based on startPosition
+    float groupMaxX = 25.0f + (cols - 1) * colSpacing;
 
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
@@ -246,32 +284,63 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render enemies
-        glm::mat4 enemy1Model = glm::mat4(1.0f);
-        enemy1Model = glm::translate(enemy1Model, glm::vec3(std::get<0>(enemy1.position), std::get<1>(enemy1.position), std::get<2>(enemy1.position)));
-        enemy1Model = glm::scale(enemy1Model, glm::vec3(0.5f, 0.5f, 0.5f));
-        ourShader.setMat4("model", enemy1Model);
-        enemy1.Draw(ourShader);
+        // Update enemy positions using group-based movement
+        // Step 1: Check if the group is about to exceed boundaries
+        bool boundaryReached = false;
 
-        glm::mat4 enemy2Model = glm::mat4(1.0f);
-        enemy2Model = glm::translate(enemy2Model, glm::vec3(std::get<0>(enemy2.position), std::get<1>(enemy2.position), std::get<2>(enemy2.position)));
-        enemy2Model = glm::scale(enemy2Model, glm::vec3(0.5f, 0.5f, 0.5f));
-        ourShader.setMat4("model", enemy2Model);
-        enemy2.Draw(ourShader);
+        if ((enemyDirection == 1 && groupMaxX + enemyMoveSpeed * deltaTime > enemyBoundaryRight) ||
+            (enemyDirection == -1 && groupMinX - enemyMoveSpeed * deltaTime < enemyBoundaryLeft))
+        {
+            boundaryReached = true;
+        }
 
-        glm::mat4 enemy3Model = glm::mat4(1.0f);
-        enemy3Model = glm::translate(enemy3Model, glm::vec3(std::get<0>(enemy3.position), std::get<1>(enemy3.position), std::get<2>(enemy3.position)));
-        enemy3Model = glm::scale(enemy3Model, glm::vec3(0.5f, 0.5f, 0.5f));
-        ourShader.setMat4("model", enemy3Model);
-        enemy3.Draw(ourShader);        
-        
+        if (boundaryReached)
+        {
+            // Change direction and move the group down
+            enemyDirection *= -1;
+            for (auto &enemy : enemies)
+            {
+                enemy.moveDown(enemyMoveDownDistance);
+            }
+
+            // Update group boundaries after moving down
+            // (Assuming enemies only move horizontally and down)
+        }
+        else
+        {
+            // Move the group horizontally
+            float deltaX = enemyDirection * enemyMoveSpeed * deltaTime;
+            for (auto &enemy : enemies)
+            {
+                enemy.moveHorizontally(deltaX);
+            }
+
+            // Update group boundaries based on movement
+            groupMinX += enemyDirection * enemyMoveSpeed * deltaTime;
+            groupMaxX += enemyDirection * enemyMoveSpeed * deltaTime;
+        }
+
+        // Render enemies
+        for (auto &enemy : enemies)
+        {
+            glm::mat4 enemyModel = glm::mat4(1.0f);
+            enemyModel = glm::translate(enemyModel, glm::vec3(
+                                                        std::get<0>(enemy.position),
+                                                        std::get<1>(enemy.position),
+                                                        std::get<2>(enemy.position)));
+            enemyModel = glm::rotate(enemyModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            enemyModel = glm::scale(enemyModel, glm::vec3(0.5f, 0.5f, 0.5f));
+            ourShader.setMat4("model", enemyModel);
+            enemy.Draw(ourShader);
+        }
+
         // render the fighter1 model
         glm::mat4 fighter1Model = glm::mat4(1.0f);
         if (play1)
         {
             if (!fighter1.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
                 fighter1.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
-            else 
+            else
             {
                 play2 = true;
                 play1 = false;
@@ -280,9 +349,9 @@ int main()
 
         if (play2)
         {
-            if(!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f))) 
+            if (!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f)))
                 fighter1.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
-            else 
+            else
             {
                 play3 = true;
                 play2 = false;
@@ -291,9 +360,9 @@ int main()
 
         if (play3)
         {
-            if(!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150))) 
+            if (!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150)))
                 fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
-            else 
+            else
             {
                 play4 = true;
                 play3 = false;
@@ -309,7 +378,7 @@ int main()
         // render the hangar model
         glm::mat4 hangarModel = glm::mat4(1.0f);
         hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));     // it's a bit too big for our scene, so scale it down
+        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));       // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", hangarModel);
         hangar.Draw(ourShader);
 
@@ -344,18 +413,18 @@ void processInput(GLFWwindow *window, Model &fighter1)
         glfwSetWindowShouldClose(window, true);
 
     // toggle camera lock when pressing the "L" key
-    static bool lKeyPressed = false; 
+    static bool lKeyPressed = false;
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
     {
         if (!lKeyPressed)
         {
-            cameraLocked = !cameraLocked; 
+            cameraLocked = !cameraLocked;
             lKeyPressed = true;
         }
     }
     else
     {
-        lKeyPressed = false; 
+        lKeyPressed = false;
     }
 
     // switch camera positions based on key input
@@ -365,53 +434,53 @@ void processInput(GLFWwindow *window, Model &fighter1)
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos2, cameraFront2, false, fighter1); 
+        switchCameraPosition(cameraPos2, cameraFront2, false, fighter1);
     }
     if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
     {
-        switchCameraPosition(cameraPos3, cameraFront3, false, fighter1); 
+        switchCameraPosition(cameraPos3, cameraFront3, false, fighter1);
     }
 
     // variables for movement
-    static float fighterVelocity = 0.0f; 
-    static float fighterAcceleration = 10.0f; 
-    static float fighterMaxSpeed = 5.0f; 
+    static float fighterVelocity = 0.0f;
+    static float fighterAcceleration = 10.0f;
+    static float fighterMaxSpeed = 5.0f;
     static float fighterDamping = 5.0f;
     static float fighterMinX = -5.0f;
-    static float fighterMaxX = 5.0f;  
+    static float fighterMaxX = 5.0f;
 
-    static float maxTiltAngle = 15.0f;    
-    static float tiltSpeed = 5.0f;      
+    static float maxTiltAngle = 15.0f;
+    static float tiltSpeed = 5.0f;
 
     // different boundaries for each position
-    static float fighterMinXPos1 = -5.0f;  
-    static float fighterMaxXPos1 = 5.0f;  
+    static float fighterMinXPos1 = -5.0f;
+    static float fighterMaxXPos1 = 5.0f;
 
-    static float fighterMinXPos2 = -10.0f; 
-    static float fighterMaxXPos2 = 10.0f;  
+    static float fighterMinXPos2 = -10.0f;
+    static float fighterMaxXPos2 = 10.0f;
 
-    static float fighterMinXPos3 = -7.0f; 
-    static float fighterMaxXPos3 = 7.0f;  
+    static float fighterMinXPos3 = -7.0f;
+    static float fighterMaxXPos3 = 7.0f;
 
-    // movement for the 3 positions 
-    if (camera.Position == cameraPos1 || camera.Position == cameraPos2 || camera.Position == cameraPos3) 
+    // movement for the 3 positions
+    if (camera.Position == cameraPos1 || camera.Position == cameraPos2 || camera.Position == cameraPos3)
     {
         float targetTiltAngle = 0.0f;
         bool isMoving = false;
-        bool atBoundary = false; 
+        bool atBoundary = false;
 
         // check for movement and determine target tilt angle and accelerates left/right
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
         {
             isMoving = true;
-            targetTiltAngle = -maxTiltAngle; 
-            fighterVelocity -= fighterAcceleration * deltaTime; 
+            targetTiltAngle = -maxTiltAngle;
+            fighterVelocity -= fighterAcceleration * deltaTime;
         }
         else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
         {
             isMoving = true;
-            targetTiltAngle = maxTiltAngle; 
-            fighterVelocity += fighterAcceleration * deltaTime; 
+            targetTiltAngle = maxTiltAngle;
+            fighterVelocity += fighterAcceleration * deltaTime;
         }
         else
         {
@@ -419,52 +488,54 @@ void processInput(GLFWwindow *window, Model &fighter1)
             if (fighterVelocity > 0.0f)
             {
                 fighterVelocity -= fighterDamping * deltaTime;
-                if (fighterVelocity < 0.0f) fighterVelocity = 0.0f; 
+                if (fighterVelocity < 0.0f)
+                    fighterVelocity = 0.0f;
             }
             else if (fighterVelocity < 0.0f)
             {
                 fighterVelocity += fighterDamping * deltaTime;
-                if (fighterVelocity > 0.0f) fighterVelocity = 0.0f; 
+                if (fighterVelocity > 0.0f)
+                    fighterVelocity = 0.0f;
             }
         }
 
         // clamp velocity to maximum speed
         fighterVelocity = glm::clamp(fighterVelocity, -fighterMaxSpeed, fighterMaxSpeed);
 
-        // update fighter position 
+        // update fighter position
         std::get<2>(fighter1.position) += fighterVelocity * deltaTime;
 
         // apply different boundaries based on the camera position
         if (camera.Position == cameraPos1)
         {
-            
+
             if (std::get<2>(fighter1.position) < fighterMinXPos1)
             {
                 std::get<2>(fighter1.position) = fighterMinXPos1;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;    
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
             if (std::get<2>(fighter1.position) > fighterMaxXPos1)
             {
                 std::get<2>(fighter1.position) = fighterMaxXPos1;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;    
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
         }
         else if (camera.Position == cameraPos2)
         {
-            
+
             if (std::get<2>(fighter1.position) < fighterMinXPos2)
             {
                 std::get<2>(fighter1.position) = fighterMinXPos2;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;    
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
             if (std::get<2>(fighter1.position) > fighterMaxXPos2)
             {
                 std::get<2>(fighter1.position) = fighterMaxXPos2;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;    
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
         }
         else if (camera.Position == cameraPos3)
@@ -472,14 +543,14 @@ void processInput(GLFWwindow *window, Model &fighter1)
             if (std::get<2>(fighter1.position) < fighterMinXPos3)
             {
                 std::get<2>(fighter1.position) = fighterMinXPos3;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;    
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
             if (std::get<2>(fighter1.position) > fighterMaxXPos3)
             {
                 std::get<2>(fighter1.position) = fighterMaxXPos3;
-                fighterVelocity = 0.0f; 
-                atBoundary = true;     
+                fighterVelocity = 0.0f;
+                atBoundary = true;
             }
         }
 
@@ -525,7 +596,6 @@ void processInput(GLFWwindow *window, Model &fighter1)
     std::cout << "Camera Position: (" << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << ") ";
     std::cout << "Camera Front: (" << camera.Front.x << ", " << camera.Front.y << ", " << camera.Front.z << ")" << std::endl;
 }
-
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
@@ -573,7 +643,6 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
-
 
 unsigned int loadCubemap(vector<std::string> faces)
 {
