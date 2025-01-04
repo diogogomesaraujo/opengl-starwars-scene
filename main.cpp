@@ -46,9 +46,27 @@ glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
 int enemyDirection = 1;             // 1 for right, -1 for left
 float enemyMoveSpeed = 500.0f;        // Units per second
 float enemyMoveDownDistance = 100.0f; // Units to move down when changing direction
-float enemyBoundaryLeft = -2000.0f;   // Left boundary on the x-axis
-float enemyBoundaryRight = 2000.0f;   // Right boundary on the x-axis
+float enemyBoundaryLeft = -2000.0f;   // 25 units left of current start
+float enemyBoundaryRight = 2000.0f;   // 25 units right of current start
 bool shouldMoveDown = false;        // Flag to indicate if enemies should move down
+
+// Function to calculate group boundaries
+std::pair<float, float> calculateInitialGroupBoundaries(const std::vector<Enemy>& enemies)
+{
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+
+    for (const auto& enemy : enemies)
+    {
+        float x = std::get<0>(enemy.position);
+        if (x < minX)
+            minX = x;
+        if (x > maxX)
+            maxX = x;
+    }
+
+    return {minX, maxX};
+}
 
 void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFighter, const Model &fighter)
 {
@@ -72,17 +90,22 @@ void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFight
     cameraLocked = true;
 }
 
-std::vector<Enemy> createEnemyGrid(const std::string &modelPath, std::tuple<float, float, float> startPosition, int rows, int cols, float rowSpacing, float colSpacing)
+std::vector<Enemy> createEnemyGrid(const std::string &modelPath, std::tuple<float, float, float> centerPosition, int rows, int cols, float rowSpacing, float colSpacing)
 {
     std::vector<Enemy> enemies;
+
+    // Calculate the offset to center the grid around the centerPosition
+    float xOffset = -((cols - 1) * colSpacing) / 2.0f;
+    float zOffset = -((rows - 1) * rowSpacing) / 2.0f;
+
     for (int row = 0; row < rows; ++row)
     {
         for (int col = 0; col < cols; ++col)
         {
             std::tuple<float, float, float> enemyPosition = std::make_tuple(
-                std::get<0>(startPosition) + col * colSpacing,
-                std::get<1>(startPosition),
-                std::get<2>(startPosition) + row * rowSpacing);
+                std::get<0>(centerPosition) + xOffset + col * colSpacing,
+                std::get<1>(centerPosition),
+                std::get<2>(centerPosition) + zOffset + row * rowSpacing);
             enemies.emplace_back(modelPath, enemyPosition);
         }
     }
@@ -146,7 +169,7 @@ int main()
 
     // Parameters for the enemy grid
     std::string enemyModelPath = "resources/fighter_1/obj.obj";
-    std::tuple<float, float, float> startPosition = std::make_tuple(25.0f, 0.0f, 0.0f);
+    std::tuple<float, float, float> startPosition = std::make_tuple(35.0f, 0.0f, 0.0f);
     int rows = 2;
     int cols = 3;
     float rowSpacing = 7.0f;
@@ -212,9 +235,9 @@ int main()
         -1.0f, -1.0f, 1.0f,
         1.0f, -1.0f, 1.0f};
 
-    // Determine initial group boundaries
-    float groupMinX = 25.0f; // Starting X position based on startPosition
-    float groupMaxX = 25.0f + (cols - 1) * colSpacing;
+    std::pair<float, float> boundaries = calculateInitialGroupBoundaries(enemies);
+    float groupMinX = boundaries.first;
+    float groupMaxX = boundaries.second;
 
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
