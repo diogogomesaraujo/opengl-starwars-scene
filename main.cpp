@@ -44,10 +44,10 @@ glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
 
 // enemy
 int enemyDirection = 1;             // 1 for right, -1 for left
-float enemyMoveSpeed = 300.0f;        // Units per second
-float enemyMoveDownDistance = 1.0f; // Units to move down when changing direction
-float enemyBoundaryLeft = -1500.0f;   // Left boundary on the x-axis
-float enemyBoundaryRight = 1500.0f;   // Right boundary on the x-axis
+float enemyMoveSpeed = 500.0f;        // Units per second
+float enemyMoveDownDistance = 100.0f; // Units to move down when changing direction
+float enemyBoundaryLeft = -2000.0f;   // Left boundary on the x-axis
+float enemyBoundaryRight = 2000.0f;   // Right boundary on the x-axis
 bool shouldMoveDown = false;        // Flag to indicate if enemies should move down
 
 void switchCameraPosition(glm::vec3 newPos, glm::vec3 newFront, bool followFighter, const Model &fighter)
