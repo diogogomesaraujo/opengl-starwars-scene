@@ -1,3 +1,6 @@
+#ifndef MODEL_H
+#define MODEL_H
+
 #include "header.h"
 #include "Mesh.h"
 
@@ -7,7 +10,7 @@ public:
     vector<Texture> textures_loaded;
     tuple<float, float, float> position;
 
-    Model(const char *path)
+    Model(char *path)
     {
         loadModel(path);
     }
@@ -217,3 +220,5 @@ private:
         return textureID;
     }
 };
+
+#endif // MODEL_H

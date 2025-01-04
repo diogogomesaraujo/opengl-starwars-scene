@@ -1,5 +1,6 @@
 #include "headers/header.h"
 #include "headers/Model.h"
+#include "headers/Enemy.h"
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -115,7 +116,12 @@ int main()
     Model fighter1("resources/fighter_1/obj.obj");
     Model hangar("resources/hangar/obj.obj");
 
-    fighter1.position = make_tuple(4.5f, -1.5f, 0.0f);
+    Enemy enemy1("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, 0.0f), 2.0f, 0.005f);
+    Enemy enemy2("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, 7.0f), 2.0f, 0.005f);
+    Enemy enemy3("resources/fighter_1/obj.obj", std::make_tuple(25.0f, 0.0f, -7.0f), 2.0f, 0.005f);
+
+
+    fighter1.position = make_tuple(4.5f, 0.0f, 0.0f);
 
     stbi_set_flip_vertically_on_load(false);
 
@@ -240,6 +246,25 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        // render enemies
+        glm::mat4 enemy1Model = glm::mat4(1.0f);
+        enemy1Model = glm::translate(enemy1Model, glm::vec3(std::get<0>(enemy1.position), std::get<1>(enemy1.position), std::get<2>(enemy1.position)));
+        enemy1Model = glm::scale(enemy1Model, glm::vec3(0.5f, 0.5f, 0.5f));
+        ourShader.setMat4("model", enemy1Model);
+        enemy1.Draw(ourShader);
+
+        glm::mat4 enemy2Model = glm::mat4(1.0f);
+        enemy2Model = glm::translate(enemy2Model, glm::vec3(std::get<0>(enemy2.position), std::get<1>(enemy2.position), std::get<2>(enemy2.position)));
+        enemy2Model = glm::scale(enemy2Model, glm::vec3(0.5f, 0.5f, 0.5f));
+        ourShader.setMat4("model", enemy2Model);
+        enemy2.Draw(ourShader);
+
+        glm::mat4 enemy3Model = glm::mat4(1.0f);
+        enemy3Model = glm::translate(enemy3Model, glm::vec3(std::get<0>(enemy3.position), std::get<1>(enemy3.position), std::get<2>(enemy3.position)));
+        enemy3Model = glm::scale(enemy3Model, glm::vec3(0.5f, 0.5f, 0.5f));
+        ourShader.setMat4("model", enemy3Model);
+        enemy3.Draw(ourShader);        
+        
         // render the fighter1 model
         glm::mat4 fighter1Model = glm::mat4(1.0f);
         if (play1)
