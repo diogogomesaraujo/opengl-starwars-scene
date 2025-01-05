@@ -337,7 +337,7 @@ int main()
     textShader.setMat4("projection", textProjection);
 
     // Parameters for the enemy grid
-    std::string enemyModelPath = "resources/fighter_1/untitled.obj";
+    std::string enemyModelPath = "resources/invader1/invader.obj";
     std::tuple<float, float, float> startPosition = std::make_tuple(35.0f, 0.0f, 0.0f);
     int rows = 2;
     int cols = 3;
@@ -595,8 +595,8 @@ int main()
                                                         std::get<0>(enemy.position),
                                                         std::get<1>(enemy.position),
                                                         std::get<2>(enemy.position)));
-            enemyModel = glm::rotate(enemyModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            enemyModel = glm::scale(enemyModel, glm::vec3(0.5f, 0.5f, 0.5f));
+            enemyModel = glm::rotate(enemyModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            enemyModel = glm::scale(enemyModel, glm::vec3(2.6f, 2.6f, 2.6f));
             ourShader.setMat4("model", enemyModel);
             enemy.Draw(ourShader);
         }
