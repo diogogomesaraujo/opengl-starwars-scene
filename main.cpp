@@ -32,6 +32,11 @@ bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, 
 
 bool showStartScreen = true; // Initially set to true to show the start screen
 
+bool isShaking = false;      // Flag to indicate if shaking is active
+float shakeDuration = 0.2f;  // Duration of the shaking effect in seconds
+float shakeTimer = 0.0f;     // Timer to track the remaining shake time
+float shakeIntensity = 0.2f; // Intensity of the shaking effect
+
 // tilt angle for fighter
 float fighterTiltAngle = 0.0f;
 
@@ -104,9 +109,10 @@ bool initializeAudio()
 
     // Initialize shootSound with shootBuffer
     shootSound.setBuffer(shootBuffer); // Assign the buffer to the sound
-    shootSound.setVolume(5.0f);      // Set desired volume
+    shootSound.setVolume(5.0f);        // Set desired volume
 
-    if (!explosionBuffer.loadFromFile("resources/explosion.wav")) {
+    if (!explosionBuffer.loadFromFile("resources/explosion.wav"))
+    {
         std::cerr << "Error: Unable to load explosion sound effect.\n";
         return false;
     }
@@ -629,7 +635,6 @@ int main()
         ourShader.use();
 
         // Check collisions
-        // Check collisions
         for (auto enemyIt = enemies.begin(); enemyIt != enemies.end();)
         {
             bool enemyHit = false;
@@ -759,42 +764,28 @@ int main()
             enemy.Draw(ourShader);
         }
 
-        // render the fighter1 model
+        // Apply shaking effect if active
+        glm::vec3 shakeOffset(0.0f, 0.0f, 0.0f);
+        if (isShaking)
+        {
+            // Generate random offsets for the shake with increased range
+            shakeOffset.x = ((rand() % 200) / 100.0f - 1.0f) * shakeIntensity * 3.0f;
+            shakeOffset.y = ((rand() % 200) / 100.0f - 1.0f) * shakeIntensity * 3.0f;
+
+            // Decrease the shake timer
+            shakeTimer -= deltaTime;
+            if (shakeTimer <= 0.0f)
+            {
+                isShaking = false; // Stop the shaking effect
+            }
+        }
+
+        // Render the fighter1 model
         glm::mat4 fighter1Model = glm::mat4(1.0f);
-        if (play1)
-        {
-            if (!fighter1.hasReachedTarget(make_tuple(28.352026f, 4.128473f, -25.634726f)))
-                fighter1.modelMove(make_tuple(28.352026f, 4.128473f, -25.634726f));
-            else
-            {
-                play2 = true;
-                play1 = false;
-            }
-        }
-
-        if (play2)
-        {
-            if (!fighter1.hasReachedTarget(make_tuple(28.506851f, 6.462111f, -66.843697f)))
-                fighter1.modelMove(make_tuple(28.506851f, 6.462111f, -66.843697f));
-            else
-            {
-                play3 = true;
-                play2 = false;
-            }
-        }
-
-        if (play3)
-        {
-            if (!fighter1.hasReachedTarget(make_tuple(-5.970362, 1.991202, -61.859150)))
-                fighter1.modelMove(make_tuple(-5.970362, 1.991202, -61.859150));
-            else
-            {
-                play4 = true;
-                play3 = false;
-            }
-        }
-
-        fighter1Model = glm::translate(fighter1Model, glm::vec3(get<0>(fighter1.position), get<1>(fighter1.position), get<2>(fighter1.position)));
+        fighter1Model = glm::translate(fighter1Model, glm::vec3(
+                                                          get<0>(fighter1.position) + shakeOffset.x,
+                                                          get<1>(fighter1.position) + shakeOffset.y,
+                                                          get<2>(fighter1.position)));
         fighter1Model = glm::rotate(fighter1Model, glm::radians(fighterTiltAngle), glm::vec3(1.0f, 0.0f, 0.0f));
         fighter1Model = glm::scale(fighter1Model, glm::vec3(0.3f, 0.3f, 0.3f));
         ourShader.setMat4("model", fighter1Model);
@@ -875,6 +866,10 @@ int main()
                 explosionSound.play();
                 playerLives--;
                 std::cout << "Player hit! Lives remaining: " << playerLives << std::endl;
+
+                // Trigger the shaking effect
+                isShaking = true;
+                shakeTimer = shakeDuration;
 
                 // Remove the projectile
                 it = enemyProjectiles.erase(it);
