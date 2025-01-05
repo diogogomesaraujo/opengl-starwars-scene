@@ -106,7 +106,7 @@ public:
 
 private:
     float lifetime;
-    float maxLifetime = 2.5f; // seconds
+    float maxLifetime = 5.0f; // seconds
 };
 
 // Initialize static members

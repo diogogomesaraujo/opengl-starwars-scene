@@ -60,11 +60,12 @@ bool cameraLocked = true;
 // enemy
 int enemyDirection = 1;               // 1 for right, -1 for left
 float enemyMoveSpeed = 500.0f;        // Units per second
-float enemyMoveDownDistance = 100.0f; // Units to move down when changing direction
+float enemyMoveDownDistance = 600.0f; // Units to move down when changing direction
 float enemyBoundaryLeft = -2000.0f;   // 25 units left of current start
 float enemyBoundaryRight = 2000.0f;   // 25 units right of current start
 bool shouldMoveDown = false;          // Flag to indicate if enemies should move down
-static float enemyShootCooldown = 1.0f; // Cooldown period for enemies (in seconds)
+
+bool victory = false; // Flag to indicate if the player has won
 
 // projectiles
 std::vector<Projectile> projectiles;
@@ -413,9 +414,9 @@ int main()
 
     // Parameters for the enemy grid
     std::string enemyModelPath = "resources/invader1/invader.obj";
-    std::tuple<float, float, float> startPosition = std::make_tuple(35.0f, 0.0f, 0.0f);
-    int rows = 2;
-    int cols = 3;
+    std::tuple<float, float, float> startPosition = std::make_tuple(50.0f, 0.0f, 0.0f);
+    int rows = 3;
+    int cols = 6;
     float rowSpacing = 7.0f;
     float colSpacing = 12.0f;
 
@@ -540,6 +541,65 @@ int main()
             }
 
             continue; // Skip the rest of the loop until the game starts
+        }
+
+        if (enemies.empty())
+        {
+            victory = true;
+        }
+
+        if (victory)
+        {
+            // Render the Victory screen
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black background
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            textShader.use();
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            glDisable(GL_DEPTH_TEST); // Disable depth testing for text rendering
+            RenderText(textShader, "Victory!", 50.0f, 150.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+            RenderText(textShader, "Press Space to Restart", 50.0f, 100.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+            RenderText(textShader, "Press ESC to Exit", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            glEnable(GL_DEPTH_TEST); // Re-enable depth testing for subsequent rendering
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            {
+                victory = false;
+                // Reset game variables
+                score = 0;
+                playerLives = 3;
+                gameOver = false;
+
+                // Clear enemies and projectiles
+                enemies.clear();
+                projectiles.clear();
+                enemyProjectiles.clear();
+
+                // Reinitialize enemies
+                enemies = createEnemyGrid(enemyModelPath, startPosition, rows, cols, rowSpacing, colSpacing);
+
+                // Reset player position
+                fighter1.position = make_tuple(4.5f, 0.0f, 0.0f);
+
+                // Reset camera
+                camera.Position = cameraPos2;
+                camera.Front = cameraFront2;
+
+                continue; // Skip the rest of the loop for this frame
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            {
+                glfwSetWindowShouldClose(window, true);
+                continue;
+            }
+
+            continue; // Skip the rest of the game logic when in victory state
         }
 
         if (gameOver)
@@ -670,34 +730,15 @@ int main()
             {
                 ++enemyIt;
             }
+        }
 
-            if (enemies.empty())
+        // Check if any invader has reached the losing position (e.g., 10.0f)
+        for (const auto &enemy : enemies)
+        {
+            if (std::get<0>(enemy.position) <= 12.5f) // Assuming Z-axis for forward movement
             {
-                static int difficultyLevel = 0;    
-                const int maxDifficultyLevels = 5;  
-
-                if (difficultyLevel < maxDifficultyLevels)
-                {
-                    enemyMoveSpeed += 50.0f;  
-                    enemyShootCooldown = glm::max(0.5f, enemyShootCooldown - 0.1f);  
-                    difficultyLevel++;
-                }
-
-                std::cout << "New wave! Difficulty level: " << difficultyLevel 
-                        << ", Speed: " << enemyMoveSpeed 
-                        << ", Cooldown: " << enemyShootCooldown << " seconds." << std::endl;
-
-                enemies = createEnemyGrid(enemyModelPath, startPosition, rows, cols, rowSpacing, colSpacing);
-
-                if (enemies.empty())
-                {
-                    std::cerr << "Warning: No enemies created for the new wave!" << std::endl;
-                    return;
-                }
-
-                auto newBoundaries = calculateInitialGroupBoundaries(enemies);
-                groupMinX = newBoundaries.first;
-                groupMaxX = newBoundaries.second;
+                std::cout << "An invader reached the player! Game Over!" << std::endl;
+                gameOver = true;
             }
         }
 
@@ -798,9 +839,9 @@ int main()
         glm::vec3 shakeOffset(0.0f, 0.0f, 0.0f);
         if (isShaking)
         {
-            // Generate random offsets for the shake with increased range
-            shakeOffset.x = ((rand() % 200) / 100.0f - 1.0f) * shakeIntensity * 3.0f;
-            shakeOffset.y = ((rand() % 200) / 100.0f - 1.0f) * shakeIntensity * 3.0f;
+            // Generate random offsets for the shake
+            shakeOffset.x = ((rand() % 100) / 100.0f - 0.5f) * shakeIntensity;
+            shakeOffset.y = ((rand() % 100) / 100.0f - 0.5f) * shakeIntensity;
 
             // Decrease the shake timer
             shakeTimer -= deltaTime;
@@ -822,6 +863,7 @@ int main()
         fighter1.Draw(ourShader);
 
         // Enemy shooting logic
+        static float enemyShootCooldown = 1.0f; // Cooldown period for enemies (in seconds)
         static float enemyShootTimer = 0.0f;
 
         if (enemyShootTimer > 0.0f)
