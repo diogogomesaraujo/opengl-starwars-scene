@@ -9,6 +9,10 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window, Model &fighter1);
 unsigned int loadCubemap(vector<std::string> faces);
 
+sf::Music themeMusic;
+sf::SoundBuffer shootBuffer;
+sf::Sound shootSound(shootBuffer);
+
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -72,6 +76,42 @@ bool gameOver = false;
 
 unsigned int textVAO, textVBO;        // VAO and VBO for text rendering
 std::map<char, Character> Characters; // Stores characters with their OpenGL textures
+
+// Function to initialize audio
+// Function to initialize audio
+bool initializeAudio()
+{
+    // Load and play theme music
+    if (!themeMusic.openFromFile("resources/theme.ogg"))
+    {
+        std::cerr << "Error: Unable to load theme music.\n";
+        return false;
+    }
+
+    themeMusic.setVolume(50.0f);
+    themeMusic.setLooping(true);
+    themeMusic.play();
+
+    // Load shooting sound buffer
+    if (!shootBuffer.loadFromFile("resources/shoot.wav"))
+    {
+        std::cerr << "Error: Unable to load shooting sound effect.\n";
+        return false;
+    }
+
+    // Initialize shootSound with shootBuffer
+    shootSound.setBuffer(shootBuffer); // Assign the buffer to the sound
+    shootSound.setVolume(75.0f);      // Set desired volume
+
+    std::cout << "Audio initialized successfully.\n";
+    return true;
+}
+
+void cleanupAudio()
+{
+    themeMusic.stop(); // Explicitly stop the music when exiting
+    // No explicit cleanup needed for `sf::Sound` or `sf::SoundBuffer` as SFML handles it internally
+}
 
 // FUNÇÕES PARA TEXTO: initTextRendering e RenderText
 void initTextRendering(const std::string &fontPath)
@@ -318,6 +358,17 @@ int main()
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
+    // Load the theme song using SFML
+    // Initialize GLFW and other systems
+    if (!initializeAudio())
+    {
+        return -1; // Exit if audio fails
+    }
+
+    // Play the music and set it to loop
+    themeMusic.setLooping(true);
+    themeMusic.setVolume(50.0f); // Adjust volume as needed    themeMusic.play();
+
     // build and compile shaders
     // -------------------------
     Shader ourShader("shaders/lighting.vs", "shaders/lighting.fs");
@@ -486,7 +537,8 @@ int main()
 
             glDisable(GL_DEPTH_TEST);
             RenderText(textShader, "Game Over", 50.0f, 150.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            RenderText(textShader, "Press Space to Restart", 50.0f, 100.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));            RenderText(textShader, "Press ESC to Exit", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            RenderText(textShader, "Press Space to Restart", 50.0f, 100.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+            RenderText(textShader, "Press ESC to Exit", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
             glEnable(GL_DEPTH_TEST);
 
             glfwSwapBuffers(window);
@@ -880,6 +932,7 @@ int main()
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
+    cleanupAudio();
     glfwTerminate();
     return 0;
 }
@@ -948,6 +1001,9 @@ void processInput(GLFWwindow *window, Model &fighter1)
 
             // Reset the cooldown timer
             shootTimer = shootCooldown;
+
+            // Play the shooting sound effect
+            shootSound.play();
         }
     }
     else

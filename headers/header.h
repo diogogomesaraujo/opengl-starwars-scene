@@ -26,6 +26,9 @@
 #include <random>
 #include <map>
 
+#include <SFML/Audio.hpp>
+#include <iostream>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

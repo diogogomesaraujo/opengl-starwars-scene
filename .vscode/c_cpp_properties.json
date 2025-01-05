@@ -10,9 +10,12 @@
                 "/opt/homebrew/include",
                 "/opt/homebrew/include/assimp",
                 "/opt/homebrew/include/freetype2",
-                "/opt/homebrew/include/GL"
+                "/opt/homebrew/include/GL",
+                "/opt/homebrew/include/SFML"       // For SFML
             ],
-            "defines": [],
+            "defines": [
+                "SFML_STATIC"                         // Optional: Add this if you're using SFML static libraries
+            ],
             "macFrameworkPath": [
                 "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],

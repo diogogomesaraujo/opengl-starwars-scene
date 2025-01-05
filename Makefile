@@ -3,7 +3,7 @@ CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -Wextra
 INCLUDES = -I/opt/homebrew/include -I$(PWD)/include -I$(PWD)/glad/include -I$(PWD)/headers -I/opt/homebrew/include/assimp -I/opt/homebrew/include/freetype2 -I/opt/homebrew/include/GL
 LDFLAGS = -L/opt/homebrew/lib
-LIBS = -lglfw -framework OpenGL -lassimp -lfreetype -framework GLUT
+LIBS = -lglfw -framework OpenGL -lassimp -lfreetype -framework GLUT -lsfml-audio
 
 # Directories
 SRC_DIR = $(PWD)
