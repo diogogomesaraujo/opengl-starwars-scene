@@ -1,48 +1,39 @@
-#version 330 core
+#version 410 core
+
 out vec4 FragColor;
 
-in vec3 FragPos;  
-in vec3 Normal;  
-in vec2 TexCoords; // From vertex shader
+in vec2 TexCoords;
+in vec3 FragPos;
+in vec3 Normal;
 
-uniform vec3 viewPos;
-
-// Material properties
-uniform vec3 materialColor;
-uniform float materialShininess;
-
-// Light properties
+uniform vec3 materialColor;  // Main color (red in this case)
+uniform vec3 emissionColor;  // Glow effect
 uniform vec3 lightPos;
-uniform vec3 lightAmbient;
-uniform vec3 lightDiffuse;
-uniform vec3 lightSpecular;
-
-// Emission properties
-uniform vec3 emissionColor; // Base emission color
-uniform float time; // Time for animation
+uniform vec3 viewPos;
 
 void main()
 {
-    // Ambient
-    vec3 ambient = lightAmbient * materialColor;
+    // Ambient lighting
+    float ambientStrength = 0.2;
+    vec3 ambient = ambientStrength * materialColor;
 
-    // Diffuse 
+    // Diffuse lighting
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = lightDiffuse * diff * materialColor;
+    vec3 diffuse = diff * materialColor;
 
-    // Specular
+    // Specular lighting
+    float specularStrength = 0.5;
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
-    vec3 specular = lightSpecular * spec; 
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    vec3 specular = specularStrength * spec * vec3(1.0); // White specular highlights
 
-    // Emission with pulsing effect
-    float pulse = 0.5 + 0.5 * sin(time * 10.0); // Pulses between 0.5 and 1.0
-    vec3 emission = emissionColor * pulse;
+    // Glow effect
+    vec3 glow = emissionColor;
 
-    // Combine all components
-    vec3 result = ambient + diffuse + specular + emission;
+    // Combine lighting components
+    vec3 result = ambient + diffuse + specular + glow;
     FragColor = vec4(result, 1.0);
 }

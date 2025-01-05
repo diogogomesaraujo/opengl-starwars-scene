@@ -514,30 +514,38 @@ int main()
         ourShader.setMat4("view", view);
 
         projectileShader.use();
-        projectileShader.setVec3("materialColor", glm::vec3(1.0f, 0.0f, 0.0f)); // Red color
-        projectileShader.setFloat("materialShininess", 1008.0f);
-        projectileShader.setVec3("emissionColor", glm::vec3(5.0f, 0.2f, 0.2f)); // Intense red glow
-        projectileShader.setFloat("time", glfwGetTime());                       // Pass time for animation
+        projectileShader.setMat4("projection", projection);
+        projectileShader.setMat4("view", view);
+        projectileShader.setVec3("materialColor", glm::vec3(1.0f, 0.0f, 0.0f)); // Bright Red
+        projectileShader.setVec3("emissionColor", glm::vec3(0.5f, 0.1f, 0.1f)); // Slight Glow
 
-        // Update and render projectiles
-        for (auto it = projectiles.begin(); it != projectiles.end();)
+        glBindVertexArray(Projectile::VAO);
+
+
+        // Rendering projectiles
+        for (auto &projectile : projectiles)
         {
-            if ((*it).active)
+            if (projectile.active)
             {
-                // Update projectile position
-                (*it).update(deltaTime);
+                projectile.update(deltaTime);  // This should move the projectile
+                projectileShader.use();
 
-                // Optional: Collision detection with enemies can be added here
+                // Set matrices
+                projectileShader.setMat4("projection", projection);
+                projectileShader.setMat4("view", view);
 
-                // Render the projectile
-                (*it).Draw(ourShader);
+                // Set colors
+                projectileShader.setVec3("materialColor", glm::vec3(1.0f, 0.0f, 0.0f));
+                projectileShader.setVec3("emissionColor", glm::vec3(0.5f, 0.1f, 0.1f));
 
-                ++it;
-            }
-            else
-            {
-                // Remove inactive projectiles
-                it = projectiles.erase(it);
+                // Set model matrix
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, projectile.position);
+                model = glm::scale(model, glm::vec3(0.1f));
+                projectileShader.setMat4("model", model);
+
+                // Render projectile
+                projectile.Draw(projectileShader);
             }
         }
 
@@ -658,11 +666,9 @@ int main()
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
         glDisable(GL_DEPTH_TEST); // Disable depth testing for text rendering
         RenderText(textShader, "Score: " + std::to_string(score), 25.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
         glEnable(GL_DEPTH_TEST); // Re-enable depth testing for subsequent rendering
-
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
