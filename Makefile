@@ -1,9 +1,9 @@
 # Compiler and flags
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -Wextra
-INCLUDES = -I/opt/homebrew/include -I$(PWD)/include -I$(PWD)/glad/include -I$(PWD)/headers -I/opt/homebrew/include/assimp
+INCLUDES = -I/opt/homebrew/include -I$(PWD)/include -I$(PWD)/glad/include -I$(PWD)/headers -I/opt/homebrew/include/assimp -I/opt/homebrew/include/freetype2 -I/opt/homebrew/include/GL
 LDFLAGS = -L/opt/homebrew/lib
-LIBS = -lglfw -framework OpenGL -lassimp
+LIBS = -lglfw -framework OpenGL -lassimp -lfreetype -framework GLUT
 
 # Directories
 SRC_DIR = $(PWD)
@@ -18,8 +18,6 @@ SOURCES = $(SRC_DIR)/main.cpp $(GLAD_DIR)/src/glad.c
 HEADERS = $(wildcard $(HEADERS_DIR)/*.h) $(wildcard $(INCLUDE_DIR)/*.h)
 
 # Object files
-
-
 OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(filter %.cpp, $(SOURCES))) \
           $(patsubst $(GLAD_DIR)/src/%.c, $(OBJ_DIR)/%.o, $(filter %.c, $(SOURCES)))
 
@@ -37,7 +35,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # Compile C source files (for glad)
-
 $(OBJ_DIR)/%.o: $(GLAD_DIR)/src/%.c
 	@mkdir -p $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@

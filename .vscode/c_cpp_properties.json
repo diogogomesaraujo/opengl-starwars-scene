@@ -8,7 +8,9 @@
                 "${workspaceFolder}/headers",
                 "${workspaceFolder}/glad/include",
                 "/opt/homebrew/include",
-                "/opt/homebrew/include/assimp"
+                "/opt/homebrew/include/assimp",
+                "/opt/homebrew/include/freetype2",
+                "/opt/homebrew/include/GL"
             ],
             "defines": [],
             "macFrameworkPath": [

@@ -23,5 +23,10 @@
 
 #include <string>
 #include <vector>
+#include <random>
+#include <map>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 using namespace std;
