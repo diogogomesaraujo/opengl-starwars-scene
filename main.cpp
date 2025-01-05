@@ -13,13 +13,6 @@ unsigned int loadCubemap(vector<std::string> faces);
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-// camera
-Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
-bool cameraLocked = false;
-
 // lighting
 glm::vec3 lightPos(0.0f, 0.0f, 15.0f);
 
@@ -29,6 +22,8 @@ float lastFrame = 0.0f;
 
 // pressed
 bool play1 = false, play2 = false, play3 = false, play4 = false, play5 = false, play6 = false;
+
+bool showStartScreen = true; // Initially set to true to show the start screen
 
 // tilt angle for fighter
 float fighterTiltAngle = 0.0f;
@@ -43,6 +38,13 @@ glm::vec3 cameraFront2 = glm::vec3(0.915654f, -0.401942f, 0.00448226f);
 glm::vec3 cameraPos3 = glm::vec3(-5.13154f, 2.62794f, 9.67647f);
 glm::vec3 cameraFront3 = glm::vec3(0.927023f, -0.116671f, -0.356394f);
 
+// camera
+Camera camera(cameraPos2, glm::vec3(0.0f, 1.0f, 0.0f), glm::degrees(atan2(cameraFront2.z, cameraFront2.x)), glm::degrees(asin(cameraFront2.y)));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
+bool firstMouse = true;
+bool cameraLocked = true;
+
 // enemy
 int enemyDirection = 1;               // 1 for right, -1 for left
 float enemyMoveSpeed = 500.0f;        // Units per second
@@ -53,6 +55,7 @@ bool shouldMoveDown = false;          // Flag to indicate if enemies should move
 
 // projectiles
 std::vector<Projectile> projectiles;
+std::vector<Projectile> enemyProjectiles;
 
 struct Character
 {
@@ -64,6 +67,8 @@ struct Character
 
 // Scoring system
 int score = 0;
+int playerLives = 3; // Player starts with 3 lives
+bool gameOver = false;
 
 unsigned int textVAO, textVBO;        // VAO and VBO for text rendering
 std::map<char, Character> Characters; // Stores characters with their OpenGL textures
@@ -322,7 +327,7 @@ int main()
     // load models
     // -----------
     Model fighter1("resources/fighter_1/untitled.obj");
-    //Model hangar("resources/hangar/obj.obj");
+    // Model hangar("resources/hangar/obj.obj");
 
     // load projectiles
     Projectile::initializeCylinder();
@@ -335,6 +340,8 @@ int main()
     glm::mat4 textProjection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
     textShader.use();
     textShader.setMat4("projection", textProjection);
+
+    stbi_set_flip_vertically_on_load(false); // Set to false if enemies should not be flipped
 
     // Parameters for the enemy grid
     std::string enemyModelPath = "resources/invader1/invader.obj";
@@ -428,12 +435,101 @@ int main()
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        // Check if the game is in the start screen state
+        if (showStartScreen)
+        {
+            // Render the Start Screen
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black background
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            textShader.use();
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            glDisable(GL_DEPTH_TEST); // Disable depth testing for text rendering
+
+            // Render "Space Invaders" Title
+            RenderText(textShader, "Space Invaders", 50.0f, 150.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+
+            // Render Instructions
+            RenderText(textShader, "Press Space to Start", 50.0f, 100.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+            RenderText(textShader, "Press ESC to Exit", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            glEnable(GL_DEPTH_TEST); // Re-enable depth testing for subsequent rendering
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+            // Check for input to start the game
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            {
+                showStartScreen = false; // Hide the start screen
+            }
+
+            // Allow exiting from the start screen
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            {
+                glfwSetWindowShouldClose(window, true);
+            }
+
+            continue; // Skip the rest of the loop until the game starts
+        }
+
+        if (gameOver)
+        {
+            // Render the "Game Over" screen
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            textShader.use();
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            glDisable(GL_DEPTH_TEST);
+            RenderText(textShader, "Game Over", 50.0f, 150.0f, 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+            RenderText(textShader, "Press Space to Restart", 50.0f, 100.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));            RenderText(textShader, "Press ESC to Exit", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            glEnable(GL_DEPTH_TEST);
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            {
+                // Reset game variables
+                score = 0;
+                playerLives = 3;
+                gameOver = false;
+
+                // Clear enemies and projectiles
+                enemies.clear();
+                projectiles.clear();
+                enemyProjectiles.clear();
+
+                // Reinitialize enemies
+                enemies = createEnemyGrid(enemyModelPath, startPosition, rows, cols, rowSpacing, colSpacing);
+
+                // Reset player position
+                fighter1.position = make_tuple(4.5f, 0.0f, 0.0f);
+
+                // Reset camera
+                camera.Position = cameraPos2;
+                camera.Front = cameraFront2;
+
+                continue; // Skip the rest of the loop for this frame
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            {
+                glfwSetWindowShouldClose(window, true);
+                continue;
+            }
+
+            continue; // Skip the rest of the game logic when gameOver is true
+        }
         // per-frame time logic
         // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
         // Set material properties (if applicable)
         ourShader.setFloat("material.shininess", 32.0f); // Adjust shininess for the material
 
@@ -521,13 +617,12 @@ int main()
 
         glBindVertexArray(Projectile::VAO);
 
-
         // Rendering projectiles
         for (auto &projectile : projectiles)
         {
             if (projectile.active)
             {
-                projectile.update(deltaTime);  // This should move the projectile
+                projectile.update(deltaTime); // This should move the projectile
                 projectileShader.use();
 
                 // Set matrices
@@ -642,12 +737,103 @@ int main()
         ourShader.setMat4("model", fighter1Model);
         fighter1.Draw(ourShader);
 
+        // Enemy shooting logic
+        static float enemyShootCooldown = 1.0f; // Cooldown period for enemies (in seconds)
+        static float enemyShootTimer = 0.0f;
+
+        if (enemyShootTimer > 0.0f)
+            enemyShootTimer -= deltaTime;
+
+        if (enemyShootTimer <= 0.0f)
+        {
+            // Randomly pick an enemy to shoot
+            if (!enemies.empty())
+            {
+                int randomEnemyIndex = rand() % enemies.size();
+                const Enemy &shootingEnemy = enemies[randomEnemyIndex];
+
+                // Calculate shooting direction towards the player's line of movement
+                glm::vec3 enemyPos = glm::vec3(
+                    std::get<0>(shootingEnemy.position),
+                    std::get<1>(shootingEnemy.position),
+                    std::get<2>(shootingEnemy.position));
+
+                glm::vec3 playerLineDirection = glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)); // Replace this with player's movement direction
+
+                // Create the enemy projectile
+                glm::vec3 projectileVelocity = -playerLineDirection * 20.0f; // Negative for opposite direction
+                enemyProjectiles.emplace_back(enemyPos, projectileVelocity);
+            }
+
+            // Reset the timer
+            enemyShootTimer = enemyShootCooldown;
+        }
+
+        // Update and render enemy projectiles
+        for (auto it = enemyProjectiles.begin(); it != enemyProjectiles.end();)
+        {
+            if (it->active)
+            {
+                it->update(deltaTime); // Update projectile position
+
+                // Set up shader and transformations
+                projectileShader.use();
+                projectileShader.setMat4("projection", projection);
+                projectileShader.setMat4("view", view);
+                projectileShader.setVec3("materialColor", glm::vec3(0.0f, 1.0f, 0.0f)); // Enemy projectile color
+                projectileShader.setVec3("emissionColor", glm::vec3(0.1f, 0.5f, 0.1f)); // Enemy projectile glow
+
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, it->position);
+                model = glm::scale(model, glm::vec3(0.1f));
+                projectileShader.setMat4("model", model);
+
+                // Render the projectile
+                it->Draw(projectileShader);
+
+                ++it;
+            }
+            else
+            {
+                // Remove inactive projectiles
+                it = enemyProjectiles.erase(it);
+            }
+        }
+
+        // Check collisions between player and enemy projectiles
+        for (auto it = enemyProjectiles.begin(); it != enemyProjectiles.end();)
+        {
+            glm::vec3 playerMin = glm::vec3(std::get<0>(fighter1.position) - 2.0f, std::get<1>(fighter1.position) - 2.0f, std::get<2>(fighter1.position) - 2.0f);
+            glm::vec3 playerMax = glm::vec3(std::get<0>(fighter1.position) + 2.0f, std::get<1>(fighter1.position) + 2.0f, std::get<2>(fighter1.position) + 2.0f);
+
+            if (checkCollision(playerMin, playerMax, it->getBoundingBoxMin(), it->getBoundingBoxMax()))
+            {
+                // Player is hit
+                playerLives--;
+                std::cout << "Player hit! Lives remaining: " << playerLives << std::endl;
+
+                // Remove the projectile
+                it = enemyProjectiles.erase(it);
+
+                // Check if the game should end
+                if (playerLives <= 0)
+                {
+                    std::cout << "Game Over! Player ran out of lives." << std::endl;
+                    gameOver = true; // Set the game over flag
+                }
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
         // render the hangar model
-        //glm::mat4 hangarModel = glm::mat4(1.0f);
-        //hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        //hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));       // it's a bit too big for our scene, so scale it down
-        //ourShader.setMat4("model", hangarModel);
-        //hangar.Draw(ourShader);
+        // glm::mat4 hangarModel = glm::mat4(1.0f);
+        // hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        // hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));       // it's a bit too big for our scene, so scale it down
+        // ourShader.setMat4("model", hangarModel);
+        // hangar.Draw(ourShader);
 
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
@@ -668,6 +854,7 @@ int main()
 
         glDisable(GL_DEPTH_TEST); // Disable depth testing for text rendering
         RenderText(textShader, "Score: " + std::to_string(score), 25.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+        RenderText(textShader, "Lives: " + std::to_string(playerLives), SCR_WIDTH - 450.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
         glEnable(GL_DEPTH_TEST); // Re-enable depth testing for subsequent rendering
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
