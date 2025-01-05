@@ -13,6 +13,9 @@ sf::Music themeMusic;
 sf::SoundBuffer shootBuffer;
 sf::Sound shootSound(shootBuffer);
 
+sf::SoundBuffer explosionBuffer;
+sf::Sound explosionSound(explosionBuffer);
+
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -102,6 +105,13 @@ bool initializeAudio()
     // Initialize shootSound with shootBuffer
     shootSound.setBuffer(shootBuffer); // Assign the buffer to the sound
     shootSound.setVolume(75.0f);      // Set desired volume
+
+    if (!explosionBuffer.loadFromFile("resources/explosion.wav")) {
+        std::cerr << "Error: Unable to load explosion sound effect.\n";
+        return false;
+    }
+    explosionSound.setBuffer(explosionBuffer);
+    explosionSound.setVolume(75.0f); // Adjust volume as needed
 
     std::cout << "Audio initialized successfully.\n";
     return true;
@@ -633,6 +643,7 @@ int main()
                     // Remove the projectile
                     projIt = projectiles.erase(projIt);
                     enemyHit = true;
+                    explosionSound.play();
                     break; // Stop checking other projectiles for this enemy
                 }
                 else
@@ -861,6 +872,7 @@ int main()
             if (checkCollision(playerMin, playerMax, it->getBoundingBoxMin(), it->getBoundingBoxMax()))
             {
                 // Player is hit
+                explosionSound.play();
                 playerLives--;
                 std::cout << "Player hit! Lives remaining: " << playerLives << std::endl;
 
