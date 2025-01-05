@@ -104,14 +104,14 @@ bool initializeAudio()
 
     // Initialize shootSound with shootBuffer
     shootSound.setBuffer(shootBuffer); // Assign the buffer to the sound
-    shootSound.setVolume(75.0f);      // Set desired volume
+    shootSound.setVolume(5.0f);      // Set desired volume
 
     if (!explosionBuffer.loadFromFile("resources/explosion.wav")) {
         std::cerr << "Error: Unable to load explosion sound effect.\n";
         return false;
     }
     explosionSound.setBuffer(explosionBuffer);
-    explosionSound.setVolume(75.0f); // Adjust volume as needed
+    explosionSound.setVolume(5.0f); // Adjust volume as needed
 
     std::cout << "Audio initialized successfully.\n";
     return true;
@@ -918,7 +918,7 @@ int main()
 
         glDisable(GL_DEPTH_TEST); // Disable depth testing for text rendering
         RenderText(textShader, "Score: " + std::to_string(score), 25.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
-        RenderText(textShader, "Lives: " + std::to_string(playerLives), SCR_WIDTH - 450.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        RenderText(textShader, "Lives: " + std::to_string(playerLives), SCR_WIDTH - 450.0f, SCR_HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
         glEnable(GL_DEPTH_TEST); // Re-enable depth testing for subsequent rendering
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
