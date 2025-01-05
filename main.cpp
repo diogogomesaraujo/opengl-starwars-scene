@@ -64,6 +64,7 @@ float enemyMoveDownDistance = 100.0f; // Units to move down when changing direct
 float enemyBoundaryLeft = -2000.0f;   // 25 units left of current start
 float enemyBoundaryRight = 2000.0f;   // 25 units right of current start
 bool shouldMoveDown = false;          // Flag to indicate if enemies should move down
+static float enemyShootCooldown = 1.0f; // Cooldown period for enemies (in seconds)
 
 // projectiles
 std::vector<Projectile> projectiles;
@@ -669,6 +670,35 @@ int main()
             {
                 ++enemyIt;
             }
+
+            if (enemies.empty())
+            {
+                static int difficultyLevel = 0;    
+                const int maxDifficultyLevels = 5;  
+
+                if (difficultyLevel < maxDifficultyLevels)
+                {
+                    enemyMoveSpeed += 50.0f;  
+                    enemyShootCooldown = glm::max(0.5f, enemyShootCooldown - 0.1f);  
+                    difficultyLevel++;
+                }
+
+                std::cout << "New wave! Difficulty level: " << difficultyLevel 
+                        << ", Speed: " << enemyMoveSpeed 
+                        << ", Cooldown: " << enemyShootCooldown << " seconds." << std::endl;
+
+                enemies = createEnemyGrid(enemyModelPath, startPosition, rows, cols, rowSpacing, colSpacing);
+
+                if (enemies.empty())
+                {
+                    std::cerr << "Warning: No enemies created for the new wave!" << std::endl;
+                    return;
+                }
+
+                auto newBoundaries = calculateInitialGroupBoundaries(enemies);
+                groupMinX = newBoundaries.first;
+                groupMaxX = newBoundaries.second;
+            }
         }
 
         // view/projection transformations
@@ -792,7 +822,6 @@ int main()
         fighter1.Draw(ourShader);
 
         // Enemy shooting logic
-        static float enemyShootCooldown = 1.0f; // Cooldown period for enemies (in seconds)
         static float enemyShootTimer = 0.0f;
 
         if (enemyShootTimer > 0.0f)
