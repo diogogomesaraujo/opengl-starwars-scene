@@ -414,7 +414,7 @@ int main()
 
     // Parameters for the enemy grid
     std::string enemyModelPath = "resources/invader1/invader.obj";
-    std::tuple<float, float, float> startPosition = std::make_tuple(50.0f, 0.0f, 0.0f);
+    std::tuple<float, float, float> startPosition = std::make_tuple(55.0f, 0.0f, 0.0f);
     int rows = 3;
     int cols = 6;
     float rowSpacing = 7.0f;
