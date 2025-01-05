@@ -322,7 +322,7 @@ int main()
     // load models
     // -----------
     Model fighter1("resources/fighter_1/untitled.obj");
-    Model hangar("resources/hangar/obj.obj");
+    //Model hangar("resources/hangar/obj.obj");
 
     // load projectiles
     Projectile::initializeCylinder();
@@ -643,11 +643,11 @@ int main()
         fighter1.Draw(ourShader);
 
         // render the hangar model
-        glm::mat4 hangarModel = glm::mat4(1.0f);
-        hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));       // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", hangarModel);
-        hangar.Draw(ourShader);
+        //glm::mat4 hangarModel = glm::mat4(1.0f);
+        //hangarModel = glm::translate(hangarModel, glm::vec3(-30.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        //hangarModel = glm::scale(hangarModel, glm::vec3(0.1f, 0.1f, 0.1f));       // it's a bit too big for our scene, so scale it down
+        //ourShader.setMat4("model", hangarModel);
+        //hangar.Draw(ourShader);
 
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
