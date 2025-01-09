@@ -2,7 +2,9 @@
 
 A 3D remake of the classic Space Invaders game, built in **OpenGL** with **C++** for a Computer Graphics class.
 
-Watch the gameplay: [Demo Video](https://www.youtube.com/watch?v=L2UXd0NxTO4&ab_channel=DiogoAraujo)
+- Watch the gameplay: [Demo Video](https://www.youtube.com/watch?v=L2UXd0NxTO4&ab_channel=DiogoAraujo)
+
+- Download resources: [Resources](https://www.mediafire.com/file/aogh7flzpxknr8w/resources.zip/file)
 
 ## Overview
 
